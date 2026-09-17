@@ -833,7 +833,7 @@
   productModal.addEventListener('click', function(e){ if (e.target === productModal) closeProductModal(); });
 
   document.getElementById('save-product-btn').addEventListener('click', function(){
-    var name = document.getElementById('f-name').value.trim() || ('Producto ' + (DATA.length + 1));
+    var name = document.getElementById('f-name').value.trim() || UNKNOWN_MODEL_NAME;
     var originalRaw = document.getElementById('f-original').value.trim();
     var sale = document.getElementById('f-sale').value.trim() || "0";
     var sizes = document.getElementById('f-sizes').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
@@ -1218,6 +1218,59 @@
     return dataUrlFallback(file);
   }
 
+  // ---------------- AI model identification (sample capability, looks at the photo) ----------------
+  var UNKNOWN_MODEL_NAME = 'Modelo por confirmar';
+  var IDENTIFY_PROMPT_ONE =
+    'Eres experto en identificar modelos de zapatillas (sneakers) por su apariencia. ' +
+    'Mira la foto y responde SOLO con el nombre oficial de marca + modelo + color, en este estilo exacto: ' +
+    '"Air Jordan 4 Retro Blanco/Verde", "Golden Goose Super-Star Blanco/Gris", "Asics Gel-Kayano 14 Negro/Blanco". ' +
+    'Si no puedes identificar la marca o el modelo con certeza, responde exactamente: ' + UNKNOWN_MODEL_NAME + '. ' +
+    'No agregues explicaciones, comillas ni texto adicional, solo el nombre.';
+  function identifyChunkPrompt(n){
+    return 'Eres experto en identificar modelos de zapatillas (sneakers) por su apariencia. ' +
+      'Te muestro ' + n + ' fotos en orden. Responde SOLO con un array JSON de exactamente ' + n +
+      ' strings, uno por foto en el mismo orden, con el nombre oficial de marca + modelo + color, en este estilo: ' +
+      '"Air Jordan 4 Retro Blanco/Verde", "Golden Goose Super-Star Blanco/Gris", "Asics Gel-Kayano 14 Negro/Blanco". ' +
+      'Si no identificas alguna con certeza, usa exactamente "' + UNKNOWN_MODEL_NAME + '" en esa posición. ' +
+      'No agregues nada más, solo el array JSON.';
+  }
+  function identifyChunk(sample, chunk){
+    if (chunk.length === 1){
+      return sample(IDENTIFY_PROMPT_ONE, { images: chunk, modelTier: 'quick', cache: false }).then(function(res){
+        var name = String((res && res.text) || '').trim().replace(/^["']|["']$/g, '');
+        return [name || null];
+      }).catch(function(){ return [null]; });
+    }
+    return sample.json(identifyChunkPrompt(chunk.length), { images: chunk, modelTier: 'quick', cache: false }).then(function(arr){
+      if (!Array.isArray(arr) || arr.length !== chunk.length) throw new Error('bad_shape');
+      return arr.map(function(n){ var s = String(n || '').trim(); return s || null; });
+    }).catch(function(){ return chunk.map(function(){ return null; }); });
+  }
+  function identifyProductNames(files, onProgress){
+    if (!files.length) return Promise.resolve([]);
+    if (typeof claude === 'undefined' || !claude || !claude.use){ return Promise.resolve(files.map(function(){ return null; })); }
+    return claude.use('sample').then(function(sample){
+      if (!sample) return files.map(function(){ return null; });
+      return sample.limits().then(function(limits){
+        if (!limits || !limits.images) return files.map(function(){ return null; });
+        var maxCount = limits.images.maxCount || 1;
+        var chunks = [];
+        for (var i = 0; i < files.length; i += maxCount){ chunks.push(files.slice(i, i + maxCount)); }
+        if (onProgress) onProgress(0, chunks.length);
+        var done = 0;
+        return Promise.all(chunks.map(function(chunk){
+          return identifyChunk(sample, chunk).then(function(res){
+            done++;
+            if (onProgress) onProgress(done, chunks.length);
+            return res;
+          });
+        })).then(function(results){
+          return results.reduce(function(acc, r){ return acc.concat(r); }, []);
+        });
+      });
+    }).catch(function(){ return files.map(function(){ return null; }); });
+  }
+
   // ---------------- inject extra edit-pro styles ----------------
   var editProStyle = document.createElement('style');
   editProStyle.textContent =
@@ -1298,7 +1351,7 @@
 
   // ---------------- product modal: file upload for image field ----------------
   var fNameInput = document.getElementById('f-name');
-  if (fNameInput) fNameInput.placeholder = 'Déjalo vacío para un nombre automático (Producto 1, 2…)';
+  if (fNameInput) fNameInput.placeholder = 'Se identifica solo al subir la foto (o escríbelo tú)';
   var fImgInput = document.getElementById('f-img');
   if (fImgInput){
     fImgInput.insertAdjacentHTML('afterend',
@@ -1309,10 +1362,24 @@
       var file = e.target.files && e.target.files[0];
       if (!file) return;
       var status = document.getElementById('f-img-status');
+      var nameWasEmpty = !fNameInput.value.trim();
       status.textContent = 'Subiendo imagen…';
       uploadImageFile(file).then(function(url){
         fImgInput.value = url;
-        status.textContent = 'Imagen lista ✔';
+        if (nameWasEmpty){
+          status.textContent = 'Imagen lista ✔ — identificando modelo…';
+          identifyProductNames([file]).then(function(names){
+            var detected = names && names[0];
+            if (detected && !fNameInput.value.trim()){
+              fNameInput.value = detected;
+              status.textContent = 'Modelo identificado ✔ — revisa el nombre.';
+            } else {
+              status.textContent = 'Imagen lista ✔ — no se identificó el modelo, escríbelo tú.';
+            }
+          });
+        } else {
+          status.textContent = 'Imagen lista ✔';
+        }
       }).catch(function(){
         status.textContent = 'No se pudo subir la imagen. Usa una URL.';
       });
@@ -1400,42 +1467,55 @@
       status.textContent = 'Agrega imágenes o una lista de productos.';
       return;
     }
-    status.textContent = 'Procesando…';
     var newProducts = [];
-    var autoCount = DATA.length;
-    function autoName(){ autoCount++; return 'Producto ' + autoCount; }
     lines.forEach(function(line){
       var parts = line.split(';').map(function(s){ return s.trim(); });
       var original = parts[1] ? Number(parts[1]) : null;
       newProducts.push({
-        name: parts[0] || autoName(),
+        name: parts[0] || UNKNOWN_MODEL_NAME,
         original: (original && !isNaN(original)) ? original : null,
         sale: parts[2] || "0",
         sizes: parts[3] ? parts[3].split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [],
         img: parts[4] || "images/logo.jpg"
       });
     });
-    var fileNames = files.map(function(){ return autoName(); });
-    Promise.all(files.map(function(file, fi){
-      return uploadImageFile(file).then(function(url){
-        newProducts.push({ name: fileNames[fi], original: null, sale: "0", sizes: [], img: url });
-      }).catch(function(){
-        status.textContent = 'No se pudo subir ' + file.name + '.';
-      });
-    })).then(function(){
-      if (!newProducts.length){
+    if (!files.length){
+      finishBulk(newProducts);
+      return;
+    }
+    status.textContent = 'Identificando modelo(s) en las fotos…';
+    identifyProductNames(files, function(done, total){
+      if (total > 1) status.textContent = 'Identificando modelos… (' + done + '/' + total + ')';
+    }).then(function(detectedNames){
+      status.textContent = 'Subiendo ' + files.length + ' imagen(es)…';
+      return Promise.all(files.map(function(file, fi){
+        return uploadImageFile(file).then(function(url){
+          newProducts.push({ name: detectedNames[fi] || UNKNOWN_MODEL_NAME, original: null, sale: "0", sizes: [], img: url });
+        }).catch(function(){
+          status.textContent = 'No se pudo subir ' + file.name + '.';
+        });
+      }));
+    }).then(function(){
+      finishBulk(newProducts);
+    });
+
+    function finishBulk(list){
+      if (!list.length){
         status.textContent = 'No se agregaron productos.';
         return;
       }
       pushHistory();
-      DATA.push.apply(DATA, newProducts);
+      DATA.push.apply(DATA, list);
       dirty = true;
       updateEditStatus();
       renderGrid();
-      status.textContent = 'Se agregaron ' + newProducts.length + ' producto(s). Ábrelos para poner precio y tallas.';
+      var unknownCount = list.filter(function(p){ return p.name === UNKNOWN_MODEL_NAME; }).length;
+      var msg = 'Se agregaron ' + list.length + ' producto(s).';
+      if (unknownCount) msg += ' ' + unknownCount + ' quedaron como "' + UNKNOWN_MODEL_NAME + '" — revísalos y ponles nombre.';
+      status.textContent = msg;
       filesInput.value = '';
       textArea.value = '';
-    });
+    }
   });
 
   normalizeMetaDefaults();

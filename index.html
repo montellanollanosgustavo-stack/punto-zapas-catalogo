@@ -661,7 +661,7 @@
   var activeCat = "Todos";
   var activeQuery = "";
 
-  function cardHtml(p, i){
+  function cardHtml(p, i, arr){
     var priceBlock = p.original
       ? '<span class="price-original">Bs ' + p.original + '</span><span class="price-sale">Bs ' + p.sale + '</span>'
       : '<span class="price-sale">' + formatSale(p.sale) + '</span>';
@@ -669,14 +669,22 @@
       ? '<span class="badge">Oferta</span>'
       : '<span class="badge promo">Promo</span>';
     var sizes = p.sizes.map(function(s){ return '<span>' + escapeHtml(s) + '</span>'; }).join('');
+    var total = arr.length;
+    var tools =
+      '<div class="card-tools">' +
+        '<button type="button" class="ct-btn" data-move="' + i + ':-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="Mover antes">◀</button>' +
+        '<button type="button" class="ct-btn" data-edit="' + i + '" aria-label="Editar producto">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+        '</button>' +
+        '<button type="button" class="ct-btn" data-dup="' + i + '" aria-label="Duplicar producto">⧉</button>' +
+        '<button type="button" class="ct-btn" data-move="' + i + ':1"' + (i === total - 1 ? ' disabled' : '') + ' aria-label="Mover después">▶</button>' +
+      '</div>';
     return (
       '<article class="card" data-index="' + i + '" data-brand="' + brandOf(p.name) + '" data-name="' + escapeHtml(p.name.toLowerCase()) + '">' +
         '<div class="card-media">' +
           '<img src="' + escapeHtml(p.img) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">' +
           badge +
-          '<button type="button" class="edit-fab" data-edit="' + i + '" aria-label="Editar producto">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
-          '</button>' +
+          tools +
         '</div>' +
         '<div class="card-body">' +
           '<h3 class="card-name">' + escapeHtml(p.name) + '</h3>' +
@@ -747,8 +755,29 @@
   });
 
   grid.addEventListener('click', function(e){
-    var editBtn = e.target.closest('.edit-fab');
-    if (editBtn){ openProductModal(Number(editBtn.dataset.edit)); }
+    var editBtn = e.target.closest('[data-edit]');
+    if (editBtn){ openProductModal(Number(editBtn.dataset.edit)); return; }
+    var dupBtn = e.target.closest('[data-dup]');
+    if (dupBtn){
+      var di = Number(dupBtn.dataset.dup);
+      pushHistory();
+      var clone = JSON.parse(JSON.stringify(DATA[di]));
+      clone.name = clone.name + ' (copia)';
+      DATA.splice(di + 1, 0, clone);
+      dirty = true; updateEditStatus(); renderGrid();
+      return;
+    }
+    var moveBtn = e.target.closest('[data-move]');
+    if (moveBtn){
+      var parts = moveBtn.dataset.move.split(':');
+      var idx = Number(parts[0]), dir = Number(parts[1]);
+      var newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= DATA.length) return;
+      pushHistory();
+      var tmp = DATA[idx]; DATA[idx] = DATA[newIdx]; DATA[newIdx] = tmp;
+      dirty = true; updateEditStatus(); renderGrid();
+      return;
+    }
   });
 
   // ---------------- contact / meta rendering ----------------
@@ -817,6 +846,7 @@
       sizes: sizes,
       img: img
     };
+    pushHistory();
     if (editingIndex === null){ DATA.push(product); }
     else { DATA[editingIndex] = product; }
     dirty = true;
@@ -843,6 +873,7 @@
       return;
     }
     resetDeleteArm();
+    pushHistory();
     DATA.splice(editingIndex, 1);
     dirty = true;
     updateEditStatus();
@@ -862,6 +893,7 @@
   document.getElementById('contact-modal-close').addEventListener('click', function(){ contactModal.hidden = true; });
   contactModal.addEventListener('click', function(e){ if (e.target === contactModal) contactModal.hidden = true; });
   document.getElementById('save-contact-btn').addEventListener('click', function(){
+    pushHistory();
     META.whatsapp = document.getElementById('m-whatsapp').value.trim().replace(/\D/g,'') || META.whatsapp;
     META.instagram = document.getElementById('m-instagram').value.trim().replace(/^@/,'') || META.instagram;
     META.address = document.getElementById('m-address').value.trim() || META.address;
@@ -969,7 +1001,14 @@
   // ---------------- save / publish ----------------
   function cleanState(){
     return {
-      meta: META,
+      meta: {
+        whatsapp: META.whatsapp,
+        instagram: META.instagram,
+        address: META.address,
+        tagline: META.tagline,
+        texts: META.texts,
+        theme: META.theme
+      },
       products: DATA.map(function(p){
         return { name:p.name, original:p.original, sale:p.sale, sizes:p.sizes, img:p.img };
       })
@@ -1038,8 +1077,372 @@
     }).catch(function(){});
   }
 
+  // ---------------- edit-pro: defaults, history, texts, theme, bulk upload ----------------
+  var TEXT_DEFAULTS = {
+    heroTitle: "Elige tu {par}.",
+    heroLead: "Recorre el catálogo, guarda una captura del modelo que te gustó y envíanosla por WhatsApp — así confirmamos talla y disponibilidad al toque.",
+    step1Title: "Elige tu par",
+    step1Desc: "Filtra por marca o busca el modelo y color que te gusta.",
+    step2Title: "Captura la pantalla",
+    step2Desc: "Toma un screenshot de la tarjeta con el precio y la talla.",
+    step3Title: "Envíanosla por WhatsApp",
+    step3Desc: "Te confirmamos disponibilidad al momento."
+  };
+  function normalizeMetaDefaults(){
+    META.texts = META.texts || {};
+    Object.keys(TEXT_DEFAULTS).forEach(function(k){
+      if (!META.texts[k]) META.texts[k] = TEXT_DEFAULTS[k];
+    });
+    if (META.theme === undefined) META.theme = null;
+  }
+
+  function applyTexts(){
+    var h1 = document.querySelector('.hero h1');
+    if (h1){
+      var raw = String(META.texts.heroTitle || "");
+      h1.innerHTML = escapeHtml(raw).replace(/\{([^}]+)\}/g, '<em>$1</em>');
+    }
+    var lead = document.querySelector('.hero-lead');
+    if (lead) lead.textContent = META.texts.heroLead;
+    var items = document.querySelectorAll('.steps > li');
+    var pairs = [['step1Title','step1Desc'], ['step2Title','step2Desc'], ['step3Title','step3Desc']];
+    for (var i = 0; i < items.length && i < pairs.length; i++){
+      var titleEl = items[i].querySelector('.step-title');
+      var descEl = items[i].querySelector('.step-desc');
+      if (titleEl) titleEl.textContent = META.texts[pairs[i][0]];
+      if (descEl) descEl.textContent = META.texts[pairs[i][1]];
+    }
+  }
+
+  function hexToRgb(hex){
+    hex = String(hex || "").replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(function(c){ return c + c; }).join('');
+    var num = parseInt(hex, 16);
+    if (isNaN(num)) return null;
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  }
+  function shade(hex, percent){
+    var rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    function adj(c){
+      var v = percent < 0 ? c * (1 + percent / 100) : c + (255 - c) * (percent / 100);
+      return Math.max(0, Math.min(255, Math.round(v)));
+    }
+    var r = adj(rgb.r), g = adj(rgb.g), b = adj(rgb.b);
+    return '#' + [r, g, b].map(function(v){ var s = v.toString(16); return s.length < 2 ? '0' + s : s; }).join('');
+  }
+  function applyTheme(){
+    var root = document.documentElement.style;
+    var th = META.theme;
+    if (th && th.lime){ root.setProperty('--lime', th.lime); root.setProperty('--lime-deep', shade(th.lime, -25)); }
+    else { root.removeProperty('--lime'); root.removeProperty('--lime-deep'); }
+    if (th && th.ink){ root.setProperty('--ink', th.ink); root.setProperty('--ink-2', shade(th.ink, 18)); }
+    else { root.removeProperty('--ink'); root.removeProperty('--ink-2'); }
+    if (th && th.paper){ root.setProperty('--paper', th.paper); }
+    else { root.removeProperty('--paper'); }
+  }
+
+  // ---------------- undo / redo history ----------------
+  var undoStack = [];
+  var redoStack = [];
+  function snapshotState(){ return JSON.stringify({ data: DATA, meta: META }); }
+  function restoreSnapshot(json){
+    var s = JSON.parse(json);
+    DATA.length = 0;
+    DATA.push.apply(DATA, s.data);
+    Object.keys(META).forEach(function(k){ delete META[k]; });
+    Object.keys(s.meta).forEach(function(k){ META[k] = s.meta[k]; });
+  }
+  function pushHistory(){
+    undoStack.push(snapshotState());
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack.length = 0;
+    updateHistoryButtons();
+  }
+  function fullRerender(){
+    normalizeMetaDefaults();
+    applyMeta();
+    applyTexts();
+    applyTheme();
+    renderGrid();
+  }
+  function undo(){
+    if (!undoStack.length) return;
+    redoStack.push(snapshotState());
+    restoreSnapshot(undoStack.pop());
+    dirty = true;
+    fullRerender();
+    updateEditStatus();
+    updateHistoryButtons();
+  }
+  function redo(){
+    if (!redoStack.length) return;
+    undoStack.push(snapshotState());
+    restoreSnapshot(redoStack.pop());
+    dirty = true;
+    fullRerender();
+    updateEditStatus();
+    updateHistoryButtons();
+  }
+  function updateHistoryButtons(){
+    var u = document.getElementById('undo-btn');
+    var r = document.getElementById('redo-btn');
+    if (u) u.disabled = undoStack.length === 0;
+    if (r) r.disabled = redoStack.length === 0;
+  }
+  document.addEventListener('keydown', function(e){
+    if (!editMode) return;
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    var mod = e.ctrlKey || e.metaKey;
+    if (!mod) return;
+    if (e.key === 'z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)){ e.preventDefault(); redo(); }
+  });
+
+  // ---------------- image upload (assets capability, with dataURL fallback) ----------------
+  function dataUrlFallback(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result); };
+      reader.onerror = function(){ reject(new Error('read_failed')); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function uploadImageFile(file){
+    if (typeof claude !== 'undefined' && claude && claude.use){
+      return claude.use('assets').then(function(assets){
+        if (!assets) return dataUrlFallback(file);
+        return assets.upload(file).then(function(res){ return res.url; });
+      }).catch(function(){ return dataUrlFallback(file); });
+    }
+    return dataUrlFallback(file);
+  }
+
+  // ---------------- inject extra edit-pro styles ----------------
+  var editProStyle = document.createElement('style');
+  editProStyle.textContent =
+    '.card-tools{position:absolute;top:8px;left:8px;right:8px;z-index:2;display:none;gap:6px;justify-content:flex-end;}' +
+    'body.editing .card-tools{display:flex;}' +
+    '.card-tools .ct-btn{width:26px;height:26px;border-radius:50%;border:0;cursor:pointer;background:var(--ink);color:var(--lime);display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 4px 10px -2px rgba(0,0,0,.4);padding:0;flex:none;}' +
+    '.card-tools .ct-btn svg{width:13px;height:13px;}' +
+    '.card-tools .ct-btn:hover{filter:brightness(1.15);}' +
+    '.card-tools .ct-btn:disabled{opacity:.35;cursor:default;filter:none;}' +
+    '.edit-bar button:disabled{opacity:.4;cursor:default;}' +
+    '#bulk-text{min-height:90px;}' +
+    '.color-swatch-row{display:flex;gap:10px;flex-wrap:wrap;}' +
+    '.color-swatch-row .field{flex:1;min-width:110px;}' +
+    '.color-swatch-row input[type=color]{width:100%;height:40px;padding:2px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;}';
+  document.head.appendChild(editProStyle);
+
+  // ---------------- inject extra modals (bulk upload / site texts / colors) ----------------
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="modal-backdrop" id="bulk-modal" hidden><div class="modal">' +
+      '<button type="button" class="modal-close" id="bulk-modal-close" aria-label="Cerrar">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      '</button>' +
+      '<h2>Subir productos en masa</h2>' +
+      '<p class="modal-sub">Sube varias fotos a la vez, pega una lista de productos, o ambos.</p>' +
+      '<div class="field"><label for="bulk-files">Imágenes (selecciona varias)</label><input id="bulk-files" type="file" accept="image/*" multiple></div>' +
+      '<div class="field"><label for="bulk-text">Lista de productos (uno por línea)</label>' +
+        '<textarea id="bulk-text" placeholder="Air Jordan 4 Blanco; 780; 600; 38,39,40; images/product_10.jpg"></textarea>' +
+        '<p class="modal-sub" style="margin-top:6px;margin-bottom:0;">Formato: Nombre; Precio normal; Precio oferta; Tallas; Imagen (los últimos 3 son opcionales)</p>' +
+      '</div>' +
+      '<p id="bulk-status" class="modal-sub" style="margin-bottom:0;"></p>' +
+      '<div class="modal-actions"><button type="button" class="btn-primary" id="bulk-apply-btn" style="flex:1;">Agregar productos</button></div>' +
+    '</div></div>' +
+    '<div class="modal-backdrop" id="text-modal" hidden><div class="modal">' +
+      '<button type="button" class="modal-close" id="text-modal-close" aria-label="Cerrar">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      '</button>' +
+      '<h2>Textos del sitio</h2>' +
+      '<p class="modal-sub">Usa llaves {así} para resaltar una palabra, ej: Elige tu {par}.</p>' +
+      '<div class="field"><label for="t-hero-title">Título principal</label><input id="t-hero-title" type="text"></div>' +
+      '<div class="field"><label for="t-hero-lead">Texto debajo del título</label><textarea id="t-hero-lead"></textarea></div>' +
+      '<div class="field-row"><div class="field"><label for="t-s1-title">Paso 1 · título</label><input id="t-s1-title" type="text"></div>' +
+        '<div class="field"><label for="t-s1-desc">Paso 1 · texto</label><input id="t-s1-desc" type="text"></div></div>' +
+      '<div class="field-row"><div class="field"><label for="t-s2-title">Paso 2 · título</label><input id="t-s2-title" type="text"></div>' +
+        '<div class="field"><label for="t-s2-desc">Paso 2 · texto</label><input id="t-s2-desc" type="text"></div></div>' +
+      '<div class="field-row"><div class="field"><label for="t-s3-title">Paso 3 · título</label><input id="t-s3-title" type="text"></div>' +
+        '<div class="field"><label for="t-s3-desc">Paso 3 · texto</label><input id="t-s3-desc" type="text"></div></div>' +
+      '<div class="modal-actions"><button type="button" class="btn-primary" id="text-apply-btn" style="flex:1;">Aplicar</button></div>' +
+    '</div></div>' +
+    '<div class="modal-backdrop" id="theme-modal" hidden><div class="modal">' +
+      '<button type="button" class="modal-close" id="theme-modal-close" aria-label="Cerrar">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      '</button>' +
+      '<h2>Colores del catálogo</h2>' +
+      '<p class="modal-sub">Cambia los colores principales de la página.</p>' +
+      '<div class="color-swatch-row">' +
+        '<div class="field"><label for="c-lime">Acento</label><input id="c-lime" type="color"></div>' +
+        '<div class="field"><label for="c-ink">Oscuro</label><input id="c-ink" type="color"></div>' +
+        '<div class="field"><label for="c-paper">Claro</label><input id="c-paper" type="color"></div>' +
+      '</div>' +
+      '<div class="modal-actions"><button type="button" class="btn-secondary" id="theme-reset-btn">Restablecer</button>' +
+        '<button type="button" class="btn-primary" id="theme-apply-btn">Aplicar</button></div>' +
+    '</div></div>'
+  );
+
+  // ---------------- extra edit-bar buttons ----------------
+  var contactBtnRef = document.getElementById('edit-contact-btn');
+  if (contactBtnRef){
+    contactBtnRef.insertAdjacentHTML('beforebegin',
+      '<button type="button" class="btn-contact" id="undo-btn" title="Deshacer">↺</button>' +
+      '<button type="button" class="btn-contact" id="redo-btn" title="Rehacer">↻</button>' +
+      '<button type="button" class="btn-contact" id="text-edit-btn">Textos</button>' +
+      '<button type="button" class="btn-contact" id="theme-edit-btn">Colores</button>' +
+      '<button type="button" class="btn-contact" id="bulk-upload-btn">Subir en masa</button>'
+    );
+  }
+  document.getElementById('undo-btn').addEventListener('click', undo);
+  document.getElementById('redo-btn').addEventListener('click', redo);
+
+  // ---------------- product modal: file upload for image field ----------------
+  var fImgInput = document.getElementById('f-img');
+  if (fImgInput){
+    fImgInput.insertAdjacentHTML('afterend',
+      '<input type="file" id="f-img-file" accept="image/*" style="margin-top:8px;">' +
+      '<div id="f-img-status" class="modal-sub" style="margin-top:4px;margin-bottom:0;"></div>'
+    );
+    document.getElementById('f-img-file').addEventListener('change', function(e){
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var status = document.getElementById('f-img-status');
+      status.textContent = 'Subiendo imagen…';
+      uploadImageFile(file).then(function(url){
+        fImgInput.value = url;
+        status.textContent = 'Imagen lista ✔';
+      }).catch(function(){
+        status.textContent = 'No se pudo subir la imagen. Usa una URL.';
+      });
+    });
+  }
+
+  // ---------------- text modal wiring ----------------
+  var textModal = document.getElementById('text-modal');
+  document.getElementById('text-edit-btn').addEventListener('click', function(){
+    document.getElementById('t-hero-title').value = META.texts.heroTitle;
+    document.getElementById('t-hero-lead').value = META.texts.heroLead;
+    document.getElementById('t-s1-title').value = META.texts.step1Title;
+    document.getElementById('t-s1-desc').value = META.texts.step1Desc;
+    document.getElementById('t-s2-title').value = META.texts.step2Title;
+    document.getElementById('t-s2-desc').value = META.texts.step2Desc;
+    document.getElementById('t-s3-title').value = META.texts.step3Title;
+    document.getElementById('t-s3-desc').value = META.texts.step3Desc;
+    textModal.hidden = false;
+  });
+  document.getElementById('text-modal-close').addEventListener('click', function(){ textModal.hidden = true; });
+  textModal.addEventListener('click', function(e){ if (e.target === textModal) textModal.hidden = true; });
+  document.getElementById('text-apply-btn').addEventListener('click', function(){
+    pushHistory();
+    META.texts.heroTitle = document.getElementById('t-hero-title').value.trim() || META.texts.heroTitle;
+    META.texts.heroLead = document.getElementById('t-hero-lead').value.trim() || META.texts.heroLead;
+    META.texts.step1Title = document.getElementById('t-s1-title').value.trim() || META.texts.step1Title;
+    META.texts.step1Desc = document.getElementById('t-s1-desc').value.trim() || META.texts.step1Desc;
+    META.texts.step2Title = document.getElementById('t-s2-title').value.trim() || META.texts.step2Title;
+    META.texts.step2Desc = document.getElementById('t-s2-desc').value.trim() || META.texts.step2Desc;
+    META.texts.step3Title = document.getElementById('t-s3-title').value.trim() || META.texts.step3Title;
+    META.texts.step3Desc = document.getElementById('t-s3-desc').value.trim() || META.texts.step3Desc;
+    dirty = true;
+    updateEditStatus();
+    applyTexts();
+    textModal.hidden = true;
+  });
+
+  // ---------------- theme modal wiring ----------------
+  var themeModal = document.getElementById('theme-modal');
+  document.getElementById('theme-edit-btn').addEventListener('click', function(){
+    var th = META.theme || {};
+    document.getElementById('c-lime').value = th.lime || '#b6f229';
+    document.getElementById('c-ink').value = th.ink || '#0b2e1d';
+    document.getElementById('c-paper').value = th.paper || '#f5f8f3';
+    themeModal.hidden = false;
+  });
+  document.getElementById('theme-modal-close').addEventListener('click', function(){ themeModal.hidden = true; });
+  themeModal.addEventListener('click', function(e){ if (e.target === themeModal) themeModal.hidden = true; });
+  document.getElementById('theme-apply-btn').addEventListener('click', function(){
+    pushHistory();
+    META.theme = {
+      lime: document.getElementById('c-lime').value,
+      ink: document.getElementById('c-ink').value,
+      paper: document.getElementById('c-paper').value
+    };
+    dirty = true;
+    updateEditStatus();
+    applyTheme();
+    themeModal.hidden = true;
+  });
+  document.getElementById('theme-reset-btn').addEventListener('click', function(){
+    pushHistory();
+    META.theme = null;
+    dirty = true;
+    updateEditStatus();
+    applyTheme();
+    themeModal.hidden = true;
+  });
+
+  // ---------------- bulk upload modal wiring ----------------
+  var bulkModal = document.getElementById('bulk-modal');
+  document.getElementById('bulk-upload-btn').addEventListener('click', function(){
+    document.getElementById('bulk-status').textContent = '';
+    bulkModal.hidden = false;
+  });
+  document.getElementById('bulk-modal-close').addEventListener('click', function(){ bulkModal.hidden = true; });
+  bulkModal.addEventListener('click', function(e){ if (e.target === bulkModal) bulkModal.hidden = true; });
+  document.getElementById('bulk-apply-btn').addEventListener('click', function(){
+    var filesInput = document.getElementById('bulk-files');
+    var textArea = document.getElementById('bulk-text');
+    var status = document.getElementById('bulk-status');
+    var files = Array.prototype.slice.call(filesInput.files || []);
+    var lines = textArea.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    if (!files.length && !lines.length){
+      status.textContent = 'Agrega imágenes o una lista de productos.';
+      return;
+    }
+    status.textContent = 'Procesando…';
+    var newProducts = [];
+    lines.forEach(function(line){
+      var parts = line.split(';').map(function(s){ return s.trim(); });
+      if (!parts[0]) return;
+      var original = parts[1] ? Number(parts[1]) : null;
+      newProducts.push({
+        name: parts[0],
+        original: (original && !isNaN(original)) ? original : null,
+        sale: parts[2] || "0",
+        sizes: parts[3] ? parts[3].split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [],
+        img: parts[4] || "images/logo.jpg"
+      });
+    });
+    Promise.all(files.map(function(file){
+      return uploadImageFile(file).then(function(url){
+        var name = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+        name = name.charAt(0).toUpperCase() + name.slice(1);
+        newProducts.push({ name: name, original: null, sale: "0", sizes: [], img: url });
+      }).catch(function(){
+        status.textContent = 'No se pudo subir ' + file.name + '.';
+      });
+    })).then(function(){
+      if (!newProducts.length){
+        status.textContent = 'No se agregaron productos.';
+        return;
+      }
+      pushHistory();
+      DATA.push.apply(DATA, newProducts);
+      dirty = true;
+      updateEditStatus();
+      renderGrid();
+      status.textContent = 'Se agregaron ' + newProducts.length + ' producto(s). Ábrelos para poner precio y tallas.';
+      filesInput.value = '';
+      textArea.value = '';
+    });
+  });
+
+  normalizeMetaDefaults();
   applyMeta();
+  applyTexts();
+  applyTheme();
   renderGrid();
+  updateHistoryButtons();
   initOwnerControls();
 })();
 </script>

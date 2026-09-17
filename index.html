@@ -851,6 +851,10 @@
     var sale = document.getElementById('f-sale').value.trim() || "0";
     var sizes = document.getElementById('f-sizes').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     var img = document.getElementById('f-img').value.trim() || "images/logo.jpg";
+    if (img.indexOf('blob:') === 0){
+      document.getElementById('f-img-status').textContent = 'Esta imagen todavía no terminó de subirse (o falló). Espera un momento o vuelve a elegir el archivo.';
+      return;
+    }
     var product = {
       name: name,
       original: originalRaw ? Number(originalRaw) : null,
@@ -1037,7 +1041,8 @@
   });
 
   function saveCatalog(){
-    updateEditStatus('Guardando…');
+    var pendingCount = DATA.filter(function(p){ return !!p._pending; }).length;
+    updateEditStatus(pendingCount ? ('Guardando… (' + pendingCount + ' producto(s) aún procesándose no se incluirán hasta que termines o reintentes)') : 'Guardando…');
     if (typeof claude === 'undefined' || !claude || !claude.use){
       updateEditStatus('Guardado automático no disponible en esta vista. Copia los datos abajo y pídeselos a Claude para que los aplique.');
       offerFallback();
@@ -1774,13 +1779,19 @@
       var dataIndex = startIndex + i;
       if (result.name) product.name = result.name;
       product.identification = result;
-      delete product._pending;
+      product._pending = 'Subiendo imagen…';
       if (DATA[dataIndex] === product) renderGrid();
       uploadImageFile(files[i]).then(function(url){
         if (product._previewUrl){ URL.revokeObjectURL(product._previewUrl); delete product._previewUrl; }
         product.img = url;
+        delete product._pending;
         if (DATA[dataIndex] === product) renderGrid();
-      }).catch(function(){});
+      }).catch(function(){
+        // Keep it out of cleanState() (never save a dead blob: URL) and make the
+        // failure visible in the grid instead of silently dropping the product.
+        product._pending = 'Error al subir imagen — ábrelo para reintentar';
+        if (DATA[dataIndex] === product) renderGrid();
+      });
     }).then(function(results){
       var unknownCount = results.filter(function(r){ return !r.name; }).length;
       var msg = 'Se agregaron ' + (textProducts.length + files.length) + ' producto(s).' + truncatedNote;

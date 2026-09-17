@@ -22,7 +22,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const DEFAULT_MODEL = 'claude-sonnet-5';
 const ALLOWED_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_BASE64_BYTES = 20 * 1024 * 1024; // ~20MB decoded, matches Anthropic's own image cap
-const REQUEST_TIMEOUT_MS = 55000;
+const REQUEST_TIMEOUT_MS = 25000; // per attempt — 3 attempts worst case stays well under typical serverless limits
 
 function buildPrompt(existingName) {
   return (
@@ -152,14 +152,17 @@ module.exports = async function handler(req, res) {
 
   const client = new Anthropic({ apiKey });
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  // Limited retries with exponential backoff for transient failures only —
-  // never retried on a bad request or an auth error, and never more than 3 tries total.
+  // Limited retries with exponential backoff for transient failures only.
+  // Each attempt gets its OWN AbortController: reusing one across retries
+  // would leave it permanently aborted after the first timeout, making
+  // every later attempt fail instantly instead of actually retrying.
   const maxAttempts = 3;
   let lastError = null;
+  let lastAborted = false;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const message = await client.messages.create({
         model,
@@ -185,21 +188,25 @@ module.exports = async function handler(req, res) {
       res.status(200).json(Object.assign({ productId: productId || null, sourceFilename: sourceFilename || null }, identification));
       return;
     } catch (err) {
+      clearTimeout(timeout);
       lastError = err;
+      lastAborted = controller.signal.aborted;
       const status = err && err.status;
-      const retryable = status === 429 || status === 500 || status === 502 || status === 503 || status === 529 || err.name === 'AbortError';
+      const explicitlyNonRetryable = err && err.retryable === false;
+      const retryable = !explicitlyNonRetryable && (
+        lastAborted || status === 429 || status === 500 || status === 502 || status === 503 || status === 529 || status === undefined
+      );
       if (!retryable || attempt === maxAttempts) break;
       await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
     }
   }
 
-  clearTimeout(timeout);
   const status = lastError && lastError.status;
   if (status === 401 || status === 403) {
     res.status(500).json({ error: 'unauthorized', message: 'La API key de Anthropic fue rechazada. Revisa ANTHROPIC_API_KEY en Vercel.' });
   } else if (status === 429) {
     res.status(429).json({ error: 'rate_limited', message: 'Límite de solicitudes alcanzado. Intenta de nuevo en unos segundos.' });
-  } else if (lastError && lastError.name === 'AbortError') {
+  } else if (lastAborted) {
     res.status(504).json({ error: 'timeout', message: 'La identificación tardó demasiado. Intenta de nuevo.' });
   } else if (lastError && (lastError.message === 'invalid_json' || lastError.message === 'empty_completion')) {
     res.status(502).json({ error: 'invalid_model_output', message: 'La IA no devolvió una respuesta utilizable.' });

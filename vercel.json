@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/identify-sneaker.js": {
+      "maxDuration": 60
+    }
+  }
+}

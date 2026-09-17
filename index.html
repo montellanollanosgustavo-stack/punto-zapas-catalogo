@@ -1,0 +1,1045 @@
+<meta charset="UTF-8">
+<title>Punto Zapas Catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b2e1d;
+    --ink-2:#123825;
+    --paper:#f5f8f3;
+    --card:#ffffff;
+    --line:#e1e7de;
+    --lime:#b6f229;
+    --lime-deep:#6fa60f;
+    --text:#0e2118;
+    --muted:#6b7a71;
+    --danger:#c0392b;
+    --shadow: 0 1px 2px rgba(15,35,24,.06), 0 10px 24px -14px rgba(15,35,24,.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#081c12;
+      --ink-2:#0f2c1c;
+      --paper:#0c1d14;
+      --card:#12281c;
+      --line:#1f3d2b;
+      --text:#e9f3ec;
+      --muted:#8fa89a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#081c12;
+    --ink-2:#0f2c1c;
+    --paper:#0c1d14;
+    --card:#12281c;
+    --line:#1f3d2b;
+    --text:#e9f3ec;
+    --muted:#8fa89a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{display:block;}
+  h1,h2,h3{margin:0;text-wrap:balance;}
+  p{margin:0;}
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;}
+  ::selection{background:var(--lime);color:var(--ink);}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:env(safe-area-inset-top,0px);z-index:40;
+    background:var(--ink);
+    border-bottom:1px solid rgba(182,242,41,.15);
+  }
+  .topbar-inner{
+    max-width:1180px;margin:0 auto;padding:10px 20px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-right:auto;}
+  .brand-mark{
+    width:40px;height:40px;border-radius:10px;overflow:hidden;flex:none;
+    background:var(--ink-2);
+  }
+  .brand-mark img{
+    width:100%;height:100%;object-fit:cover;object-position:50% 18%;
+    transform:scale(1.55);
+  }
+  .brand-word{
+    font-family:'Anton',sans-serif;color:#fff;font-size:19px;
+    letter-spacing:.02em;line-height:1;
+  }
+  .brand-word span{color:var(--lime);}
+  .top-actions{display:flex;align-items:center;gap:8px;}
+  .top-cta{
+    display:flex;align-items:center;gap:8px;
+    background:var(--lime);color:var(--ink);
+    font-weight:800;font-size:13px;letter-spacing:.01em;
+    padding:9px 14px;border-radius:999px;border:0;cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .top-cta:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px rgba(182,242,41,.55);}
+  .top-cta svg{width:16px;height:16px;flex:none;}
+  .top-cta.ghost{background:transparent;color:#eaf3ec;border:1px solid rgba(255,255,255,.22);}
+  .top-cta.ghost:hover{background:rgba(255,255,255,.08);box-shadow:none;}
+  .top-cta:disabled{opacity:.55;cursor:default;transform:none!important;}
+  @media (max-width:560px){
+    .top-cta .top-cta-label{display:none;}
+    .top-cta{padding:10px;}
+    .brand-word{font-size:16px;}
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:
+      radial-gradient(720px 360px at 85% -10%, rgba(182,242,41,.16), transparent 60%),
+      linear-gradient(165deg, var(--ink), var(--ink-2));
+    color:#fff;
+    padding-block:44px 40px;
+    border-bottom:1px solid rgba(182,242,41,.12);
+  }
+  .hero-inner{max-width:1180px;margin:0 auto;padding-inline:20px;}
+  .eyebrow{
+    display:inline-block;font-size:12px;font-weight:800;letter-spacing:.14em;
+    color:var(--lime);text-transform:uppercase;margin-bottom:14px;
+    animation:rise .5s ease both;
+  }
+  .hero h1{
+    font-family:'Anton',sans-serif;font-weight:400;
+    font-size:clamp(34px,6vw,58px);line-height:.98;letter-spacing:.01em;
+    color:#fff;animation:rise .55s .05s ease both;
+  }
+  .hero h1 em{font-style:normal;color:var(--lime);}
+  .hero-lead{
+    margin-top:14px;max-width:56ch;color:#cfe4d7;font-size:15.5px;line-height:1.55;
+    animation:rise .55s .1s ease both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion:reduce){
+    .eyebrow,.hero h1,.hero-lead,.steps li{animation:none!important;}
+  }
+
+  .steps{
+    list-style:none;margin:26px 0 0;padding:0;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;
+  }
+  .steps li{
+    animation:rise .5s ease both; animation-delay:calc(.12s + var(--i,0)*.06s);
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(182,242,41,.18);
+    border-radius:14px;padding:14px 14px 16px;
+  }
+  .steps .num{
+    display:flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:50%;
+    background:var(--lime);color:var(--ink);
+    font-family:'Anton',sans-serif;font-size:13px;margin-bottom:10px;
+  }
+  .steps .step-title{font-weight:800;font-size:14px;color:#fff;}
+  .steps .step-desc{margin-top:4px;font-size:13px;color:#b9cfc1;line-height:1.4;}
+
+  .contact-row{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+    color:#eaf3ec;font-size:13px;font-weight:600;
+    padding:8px 13px;border-radius:999px;
+  }
+  .chip.wa{background:var(--lime);color:var(--ink);border-color:transparent;font-weight:800;}
+  .chip svg{width:14px;height:14px;flex:none;}
+
+  .pdf-row{margin-top:14px;}
+  .pdf-link{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:13px;font-weight:700;color:#cfe4d7;
+    border:0;border-bottom:1px dashed rgba(207,228,215,.5);padding:0 0 1px;
+    background:none;cursor:pointer;
+  }
+  .pdf-link:hover{color:var(--lime);border-color:var(--lime);}
+  .pdf-link svg{width:14px;height:14px;flex:none;}
+  .pdf-link:disabled{opacity:.6;cursor:default;}
+
+  /* ---------- filter bar ---------- */
+  .filter-bar{
+    position:sticky;top:calc(61px + env(safe-area-inset-top,0px));z-index:30;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding-block:12px;
+  }
+  .filter-inner{
+    max-width:1180px;margin:0 auto;padding-inline:20px;
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  }
+  .search{
+    flex:1 1 220px;min-width:0;
+    display:flex;align-items:center;gap:8px;
+    background:var(--card);border:1px solid var(--line);border-radius:11px;
+    padding:9px 12px;
+  }
+  .search svg{width:16px;height:16px;color:var(--muted);flex:none;}
+  .search input{
+    border:0;outline:0;background:transparent;color:var(--text);
+    font-family:inherit;font-size:14px;width:100%;
+  }
+  .search input::placeholder{color:var(--muted);}
+  .cats{display:flex;flex-wrap:wrap;gap:8px;}
+  .cat-btn{
+    font-size:12.5px;font-weight:700;letter-spacing:.01em;
+    background:var(--card);color:var(--text);border:1px solid var(--line);
+    padding:8px 13px;border-radius:999px;cursor:pointer;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .cat-btn .n{color:var(--muted);font-weight:600;}
+  .cat-btn[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .cat-btn[aria-pressed="true"] .n{color:var(--lime);}
+
+  .result-note{
+    max-width:1180px;margin:14px auto 0;padding-inline:20px;
+    font-size:13px;color:var(--muted);
+  }
+
+  /* ---------- grid ---------- */
+  .grid{
+    max-width:1180px;margin:0 auto;padding:22px 20px 8px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:18px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    overflow:hidden;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;position:relative;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover{transform:translateY(-3px);}
+  .card-media{
+    position:relative;aspect-ratio:1/1;background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    border-bottom:1px solid var(--line);
+  }
+  .card-media img{width:88%;height:88%;object-fit:contain;}
+  .badge{
+    position:absolute;top:10px;left:10px;
+    font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--lime);color:var(--ink);padding:5px 9px;border-radius:999px;
+  }
+  .badge.promo{background:var(--ink);color:var(--lime);}
+  .edit-fab{
+    position:absolute;top:8px;right:8px;z-index:2;
+    width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;
+    background:var(--ink);color:var(--lime);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 10px -2px rgba(0,0,0,.4);
+  }
+  .edit-fab svg{width:15px;height:15px;}
+  .card-body{padding:14px 14px 16px;display:flex;flex-direction:column;gap:10px;flex:1;}
+  .card-name{font-size:14.5px;font-weight:800;line-height:1.28;min-height:2.56em;}
+  .price-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .price-original{font-size:12.5px;color:var(--muted);text-decoration:line-through;}
+  .price-sale{
+    font-family:'Anton',sans-serif;font-weight:400;font-size:21px;
+    background:var(--ink);color:var(--lime);
+    padding:3px 10px;border-radius:8px;letter-spacing:.01em;
+    font-variant-numeric:tabular-nums;
+  }
+  .sizes-label{
+    font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);
+    text-transform:uppercase;
+  }
+  .size-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+  .size-pills span{
+    font-size:12px;font-weight:700;color:var(--text);
+    border:1px solid var(--line);border-radius:7px;
+    padding:3px 7px;font-variant-numeric:tabular-nums;
+  }
+  .buy-btn{
+    margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--ink);color:#fff;font-weight:800;font-size:13.5px;
+    padding:11px 12px;border-radius:11px;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .buy-btn:hover{background:var(--ink-2);transform:translateY(-1px);}
+  .buy-btn svg{width:16px;height:16px;flex:none;color:var(--lime);}
+
+  .add-card{
+    border:2px dashed var(--line);border-radius:16px;background:transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    min-height:220px;cursor:pointer;color:var(--muted);font-weight:700;font-size:13.5px;
+  }
+  .add-card:hover{border-color:var(--lime-deep);color:var(--text);}
+  .add-card svg{width:26px;height:26px;}
+
+  .empty{max-width:1180px;margin:0 auto;padding:60px 20px;text-align:center;color:var(--muted);}
+
+  /* ---------- footer ---------- */
+  footer{
+    margin-top:30px;background:var(--ink);color:#eaf3ec;
+    padding-block:36px calc(28px + env(safe-area-inset-bottom,0px));
+  }
+  .footer-inner{
+    max-width:1180px;margin:0 auto;padding-inline:20px;
+    display:flex;flex-wrap:wrap;gap:28px;justify-content:space-between;
+  }
+  .footer-brand{display:flex;align-items:center;gap:12px;}
+  .footer-mark{width:52px;height:52px;border-radius:12px;overflow:hidden;flex:none;background:var(--ink-2);}
+  .footer-mark img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;transform:scale(1.55);}
+  .footer-tag{font-family:'Anton',sans-serif;font-size:14px;letter-spacing:.06em;color:var(--lime);}
+  .footer-sub{font-size:12px;color:#9fb6a8;margin-top:2px;}
+  .footer-contact{display:flex;flex-direction:column;gap:8px;font-size:13.5px;min-width:220px;}
+  .footer-contact a{display:flex;align-items:center;gap:8px;color:#eaf3ec;}
+  .footer-contact a:hover{color:var(--lime);}
+  .footer-contact svg{width:15px;height:15px;color:var(--lime);flex:none;}
+  .footer-bottom{
+    max-width:1180px;margin:26px auto 0;padding-inline:20px;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-size:12px;color:#8fa79a;
+    padding-top:16px;border-top:1px solid rgba(255,255,255,.1);
+  }
+  .footer-bottom a{color:#8fa79a;}
+  .footer-bottom a:hover{color:var(--lime);}
+
+  /* ---------- edit mode ---------- */
+  body.editing .edit-fab{display:flex;}
+  .edit-fab{display:none;}
+  body.editing .add-card{display:flex;}
+  .add-card{display:none;}
+
+  .edit-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    display:none;
+    background:var(--ink);color:#fff;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -8px 24px -10px rgba(0,0,0,.4);
+  }
+  body.editing .edit-bar{display:flex;}
+  .edit-bar-inner{
+    max-width:1180px;margin:0 auto;width:100%;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .edit-status{font-size:12.5px;color:#b9cfc1;flex:1 1 160px;min-width:120px;}
+  .edit-bar button{
+    border:0;border-radius:10px;padding:10px 14px;font-weight:800;font-size:13px;cursor:pointer;
+  }
+  .btn-save{background:var(--lime);color:var(--ink);}
+  .btn-contact{background:rgba(255,255,255,.1);color:#fff;}
+  .btn-exit{background:transparent;color:#cfe4d7;border:1px solid rgba(255,255,255,.2)!important;}
+
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(4,12,8,.55);z-index:70;
+    display:flex;align-items:flex-end;justify-content:center;
+    padding:0;
+  }
+  @media (min-width:640px){ .modal-backdrop{align-items:center;padding:24px;} }
+  .modal{
+    background:var(--card);color:var(--text);width:100%;max-width:520px;
+    max-height:92vh;overflow-y:auto;
+    border-radius:18px 18px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));
+  }
+  @media (min-width:640px){ .modal{border-radius:18px;} }
+  .modal h2{font-family:'Anton',sans-serif;font-weight:400;font-size:22px;margin-bottom:4px;}
+  .modal .modal-sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .field input, .field textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-family:inherit;font-size:14px;color:var(--text);background:var(--paper);
+  }
+  .field textarea{resize:vertical;min-height:56px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .field-check{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .modal-actions button{
+    flex:1;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:13.5px;cursor:pointer;
+  }
+  .btn-primary{background:var(--ink);color:var(--lime);}
+  .btn-secondary{background:var(--paper);color:var(--text);border:1px solid var(--line)!important;}
+  .btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)!important;flex:none!important;}
+  .modal-close{
+    position:absolute;top:14px;right:14px;background:none;border:0;cursor:pointer;
+    color:var(--muted);width:28px;height:28px;
+  }
+  .modal{position:relative;}
+
+  [hidden]{display:none!important;}
+
+  /* ---------- print ---------- */
+  .print-cover{display:none;}
+  @media print{
+    .topbar, .filter-bar, .result-note, .edit-bar, .edit-fab, .add-card, .modal-backdrop, .pdf-row{display:none!important;}
+    body{background:#fff;}
+    .hero{background:var(--ink)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding-block:26px 22px;}
+    .print-cover{
+      display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+    }
+    .print-cover img{width:150px;height:150px;border-radius:22px;object-fit:cover;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .steps{margin-top:16px;gap:8px;}
+    .steps li{padding:10px 12px 12px;}
+    .contact-row{margin-top:14px;}
+    .grid{grid-template-columns:repeat(2,1fr);gap:10px;padding:10px 18px;}
+    .card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;border-radius:10px;}
+    .card-media{aspect-ratio:auto;height:150px;padding:6px 0;}
+    .card-media img{width:80%;height:80%;}
+    .card-body{padding:9px 10px 10px;gap:6px;}
+    .card-name{font-size:12px;min-height:0;line-height:1.2;}
+    .price-row{gap:6px;}
+    .price-original{font-size:10.5px;}
+    .price-sale{font-size:15px;padding:2px 7px;border-radius:6px;}
+    .sizes-label{font-size:9px;}
+    .size-pills{gap:3px;margin-top:3px;}
+    .size-pills span{font-size:10px;padding:2px 5px;border-radius:5px;}
+    .buy-btn{padding:6px 8px;font-size:10.5px;border-radius:7px;gap:5px;}
+    .buy-btn svg{width:13px;height:13px;}
+    footer{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding-block:20px 16px;}
+    .footer-mark{width:40px;height:40px;}
+  }
+</style>
+
+<div id="top"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#top">
+      <span class="brand-mark"><img src="images/logo.jpg" alt="Punto Zapas"></span>
+      <span class="brand-word">Punto<span>Zapas</span></span>
+    </a>
+    <div class="top-actions">
+      <button type="button" class="top-cta ghost" id="print-btn" aria-label="Exportar PDF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        <span class="top-cta-label">Exportar PDF</span>
+      </button>
+      <button type="button" class="top-cta ghost" id="edit-toggle" hidden aria-label="Editar catálogo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span class="top-cta-label" id="edit-toggle-label">Editar</span>
+      </button>
+      <a class="top-cta" id="wa-top" href="https://wa.me/59175503284" target="_blank" rel="noopener" aria-label="Pedir por WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z"/></svg>
+        <span class="top-cta-label">Pedir por WhatsApp</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="print-cover"><img src="images/logo.jpg" alt="Punto Zapas"></div>
+    <span class="eyebrow" id="hero-eyebrow">Catálogo · 48 pares disponibles</span>
+    <h1>Elige tu <em>par</em>.</h1>
+    <p class="hero-lead">Recorre el catálogo, guarda una captura del modelo que te gustó y envíanosla por WhatsApp — así confirmamos talla y disponibilidad al toque.</p>
+
+    <ol class="steps">
+      <li style="--i:0">
+        <span class="num">1</span>
+        <div class="step-title">Elige tu par</div>
+        <div class="step-desc">Filtra por marca o busca el modelo y color que te gusta.</div>
+      </li>
+      <li style="--i:1">
+        <span class="num">2</span>
+        <div class="step-title">Captura la pantalla</div>
+        <div class="step-desc">Toma un screenshot de la tarjeta con el precio y la talla.</div>
+      </li>
+      <li style="--i:2">
+        <span class="num">3</span>
+        <div class="step-title">Envíanosla por WhatsApp</div>
+        <div class="step-desc">Te confirmamos disponibilidad al momento.</div>
+      </li>
+    </ol>
+
+    <div class="contact-row" id="contact-row">
+      <a class="chip wa" id="wa-chip" href="https://wa.me/59175503284" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z"/></svg>
+        <span id="wa-chip-label">+591 75503284</span>
+      </a>
+      <a class="chip" id="ig-chip" href="https://instagram.com/punto_zapas_ig" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2c2.7 0 3 0 4.1.06 1.1.05 1.8.22 2.2.37.6.23 1 .5 1.4.9.4.4.67.8.9 1.4.15.4.32 1.1.37 2.2.06 1.1.06 1.4.06 4.1s0 3-.06 4.1c-.05 1.1-.22 1.8-.37 2.2-.23.6-.5 1-.9 1.4-.4.4-.8.67-1.4.9-.4.15-1.1.32-2.2.37-1.1.06-1.4.06-4.1.06s-3 0-4.1-.06c-1.1-.05-1.8-.22-2.2-.37-.6-.23-1-.5-1.4-.9-.4-.4-.67-.8-.9-1.4-.15-.4-.32-1.1-.37-2.2C2.2 15 2.2 14.7 2.2 12s0-3 .06-4.1c.05-1.1.22-1.8.37-2.2.23-.6.5-1 .9-1.4.4-.4.8-.67 1.4-.9.4-.15 1.1-.32 2.2-.37C8.1 2.2 8.5 2.2 12 2.2m0-1.8C9.2.4 8.9.4 7.8.5c-1.2.05-2 .23-2.7.5-.75.29-1.4.68-2 1.3-.63.62-1 1.26-1.3 2-.27.7-.45 1.5-.5 2.7C1.2 8.1 1.2 8.5 1.2 12s0 3.9.1 5c.05 1.2.23 2 .5 2.7.29.75.68 1.4 1.3 2 .62.63 1.26 1 2 1.3.7.27 1.5.45 2.7.5 1.1.06 1.5.06 4.2.06s3.1 0 4.2-.06c1.2-.05 2-.23 2.7-.5.75-.29 1.4-.68 2-1.3.63-.62 1-1.26 1.3-2 .27-.7.45-1.5.5-2.7.06-1.1.06-1.5.06-4.2s0-3.1-.06-4.2c-.05-1.2-.23-2-.5-2.7-.29-.75-.68-1.4-1.3-2-.62-.63-1.26-1-2-1.3-.7-.27-1.5-.45-2.7-.5C15.1.4 14.7.4 12 .4z"/><path d="M12 6.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11m0 9.1a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2"/><circle cx="17.8" cy="6.2" r="1.3"/></svg>
+        <span id="ig-chip-label">@punto_zapas_ig</span>
+      </a>
+      <span class="chip">📍 <span id="address-label">Regimiento Carabineros 224</span></span>
+    </div>
+
+    <div class="pdf-row">
+      <button type="button" class="pdf-link" id="pdf-link-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span id="pdf-link-label">Descargar catálogo completo en PDF</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="filter-bar">
+  <div class="filter-inner">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Buscar modelo o color…" autocomplete="off">
+    </label>
+    <div class="cats" id="cats" role="group" aria-label="Filtrar por marca"></div>
+  </div>
+</div>
+
+<p class="result-note" id="result-note"></p>
+
+<main class="grid" id="grid"></main>
+<p class="empty" id="empty" hidden>No encontramos pares con esa búsqueda. Probá con otro modelo o color.</p>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="footer-mark"><img src="images/logo.jpg" alt="Punto Zapas"></span>
+      <div>
+        <div class="footer-tag" id="footer-tagline">TU ESTILO, NUESTRO PUNTO</div>
+        <div class="footer-sub" id="footer-sub">Catálogo actualizado · 48 pares en oferta</div>
+      </div>
+    </div>
+    <div class="footer-contact">
+      <a id="wa-footer" href="https://wa.me/59175503284" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z"/></svg>
+        <span id="wa-footer-label">+591 75503284</span>
+      </a>
+      <a id="ig-footer" href="https://instagram.com/punto_zapas_ig" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2c2.7 0 3 0 4.1.06 1.1.05 1.8.22 2.2.37.6.23 1 .5 1.4.9.4.4.67.8.9 1.4.15.4.32 1.1.37 2.2.06 1.1.06 1.4.06 4.1s0 3-.06 4.1c-.05 1.1-.22 1.8-.37 2.2-.23.6-.5 1-.9 1.4-.4.4-.8.67-1.4.9-.4.15-1.1.32-2.2.37-1.1.06-1.4.06-4.1.06s-3 0-4.1-.06c-1.1-.05-1.8-.22-2.2-.37-.6-.23-1-.5-1.4-.9-.4-.4-.67-.8-.9-1.4-.15-.4-.32-1.1-.37-2.2C2.2 15 2.2 14.7 2.2 12s0-3 .06-4.1c.05-1.1.22-1.8.37-2.2.23-.6.5-1 .9-1.4.4-.4.8-.67 1.4-.9.4-.15 1.1-.32 2.2-.37C8.1 2.2 8.5 2.2 12 2.2m0-1.8C9.2.4 8.9.4 7.8.5c-1.2.05-2 .23-2.7.5-.75.29-1.4.68-2 1.3-.63.62-1 1.26-1.3 2-.27.7-.45 1.5-.5 2.7C1.2 8.1 1.2 8.5 1.2 12s0 3.9.1 5c.05 1.2.23 2 .5 2.7.29.75.68 1.4 1.3 2 .62.63 1.26 1 2 1.3.7.27 1.5.45 2.7.5 1.1.06 1.5.06 4.2.06s3.1 0 4.2-.06c1.2-.05 2-.23 2.7-.5.75-.29 1.4-.68 2-1.3.63-.62 1-1.26 1.3-2 .27-.7.45-1.5.5-2.7.06-1.1.06-1.5.06-4.2s0-3.1-.06-4.2c-.05-1.2-.23-2-.5-2.7-.29-.75-.68-1.4-1.3-2-.62-.63-1.26-1-2-1.3-.7-.27-1.5-.45-2.7-.5C15.1.4 14.7.4 12 .4z"/><path d="M12 6.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11m0 9.1a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2"/><circle cx="17.8" cy="6.2" r="1.3"/></svg>
+        <span id="ig-footer-label">@punto_zapas_ig</span>
+      </a>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span id="address-footer-label">Regimiento Carabineros 224</span>
+      </span>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© Punto Zapas</span>
+    <a href="#top">Volver arriba ↑</a>
+  </div>
+</footer>
+
+<!-- ============ edit mode UI (owner only) ============ -->
+<div class="edit-bar">
+  <div class="edit-bar-inner">
+    <span class="edit-status" id="edit-status">Modo edición — los cambios se ven en vivo. Guarda para publicarlos.</span>
+    <button type="button" class="btn-contact" id="edit-contact-btn">Datos de contacto</button>
+    <button type="button" class="btn-save" id="save-btn">Guardar cambios</button>
+    <button type="button" class="btn-exit" id="exit-edit-btn">Salir sin guardar</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="product-modal" hidden>
+  <div class="modal">
+    <button type="button" class="modal-close" id="product-modal-close" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h2 id="product-modal-title">Editar producto</h2>
+    <p class="modal-sub">Los cambios se aplican al catálogo cuando guardes.</p>
+    <div class="field">
+      <label for="f-name">Nombre / color</label>
+      <input id="f-name" type="text" placeholder="Air Jordan 4 Retro Blanco/Verde">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="f-original">Precio normal (Bs)</label>
+        <input id="f-original" type="text" inputmode="numeric" placeholder="780">
+      </div>
+      <div class="field">
+        <label for="f-sale">Precio oferta / promo</label>
+        <input id="f-sale" type="text" placeholder="600 ó 2x1000">
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-sizes">Tallas disponibles (separadas por coma)</label>
+      <input id="f-sizes" type="text" placeholder="36, 37, 38, 39, 40">
+    </div>
+    <div class="field">
+      <label for="f-img">URL de la imagen</label>
+      <input id="f-img" type="text" placeholder="images/product_01.jpg o https://...">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="delete-product-btn">Eliminar</button>
+      <button type="button" class="btn-primary" id="save-product-btn">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="contact-modal" hidden>
+  <div class="modal">
+    <button type="button" class="modal-close" id="contact-modal-close" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <h2>Datos de contacto</h2>
+    <p class="modal-sub">Se usan en la portada, el pie de página y los botones de WhatsApp.</p>
+    <div class="field">
+      <label for="m-whatsapp">WhatsApp (con código de país, solo números)</label>
+      <input id="m-whatsapp" type="text" placeholder="59175503284">
+    </div>
+    <div class="field">
+      <label for="m-instagram">Usuario de Instagram</label>
+      <input id="m-instagram" type="text" placeholder="punto_zapas_ig">
+    </div>
+    <div class="field">
+      <label for="m-address">Dirección</label>
+      <input id="m-address" type="text" placeholder="Regimiento Carabineros 224">
+    </div>
+    <div class="field">
+      <label for="m-tagline">Frase / eslogan del pie de página</label>
+      <input id="m-tagline" type="text" placeholder="TU ESTILO, NUESTRO PUNTO">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-primary" id="save-contact-btn" style="flex:1;">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="product-data">{"meta":{"whatsapp":"59175503284","instagram":"punto_zapas_ig","address":"Regimiento Carabineros 224","tagline":"TU ESTILO, NUESTRO PUNTO"},"products":[{"name":"Air Jordan 4 Retro Blanco/Verde","original":780,"sale":"600","sizes":["40","41","42","43","44"],"img":"images/product_01.jpg"},{"name":"Air Jordan 3 Retro Blanco/Cement","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42"],"img":"images/product_02.jpg"},{"name":"Air Jordan 4 Retro Negro (Black Cat)","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_03.jpg"},{"name":"Asics Modelo por confirmar Blanco/Rosa","original":780,"sale":"600","sizes":["36","37","38","39","40","41"],"img":"images/product_04.jpg"},{"name":"Asics Modelo por confirmar Rosa","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_05.jpg"},{"name":"Air Jordan 4 Retro Negro/Rojo","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_06.jpg"},{"name":"Air Jordan 4 Retro PSG Blanco/Granate","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_07.jpg"},{"name":"Air Jordan 3 Retro Blanco/Cement","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_08.jpg"},{"name":"Golden Goose Super-Star Blanco/Gris","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_09.jpg"},{"name":"Golden Goose Super-Star Negro Glitter","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_10.jpg"},{"name":"Golden Goose Super-Star Blanco/Beige Estrella…","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_11.jpg"},{"name":"Air Jordan 3 Retro Negro/Malva","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_12.jpg"},{"name":"Golden Goose Super-Star Blanco/Gris Estrella…","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_13.jpg"},{"name":"Air Jordan 3 Retro Negro/Cement","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_14.jpg"},{"name":"Air Jordan 4 Retro Gris (Cool Grey)","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_15.jpg"},{"name":"Air Jordan 3 Retro Negro (Black Cat)","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_16.jpg"},{"name":"Air Jordan 4 Retro Gris Claro","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_17.jpg"},{"name":"Air Jordan 4 Retro Blanco Moteado","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_18.jpg"},{"name":"Golden Goose Super-Star Plateado Glitter","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_19.jpg"},{"name":"Air Jordan 4 Retro Negro/Rojo (Red…","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_20.jpg"},{"name":"Air Jordan 3 Retro Blanco/Rosa Floral","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43"],"img":"images/product_21.jpg"},{"name":"Air Jordan 3 Retro Blanco Multicolor","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_22.jpg"},{"name":"Air Jordan 4 Retro Negro (Black Cat)","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_23.jpg"},{"name":"Air Jordan 4 Retro Blanco/Verde","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_24.jpg"},{"name":"Air Jordan 4 Retro Crema/Dorado","original":780,"sale":"600","sizes":["36","37","38","39","40","41"],"img":"images/product_25.jpg"},{"name":"Air Jordan 4 Retro Blanco/Verde Suela…","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42"],"img":"images/product_26.jpg"},{"name":"Air Jordan 4 Retro Blanco/Verde Metálico","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_27.jpg"},{"name":"Air Jordan 3 Retro Crema/Celeste/Amarillo","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42"],"img":"images/product_28.jpg"},{"name":"Air Jordan 4 Retro Negro/Rojo (Red…","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_29.jpg"},{"name":"Air Jordan 4 Retro Blanco/Negro","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_30.jpg"},{"name":"Air Jordan 3 Retro Blanco/Naranja","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42","43","44"],"img":"images/product_31.jpg"},{"name":"Air Jordan 4 Retro Rosa/Negro","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_32.jpg"},{"name":"Air Jordan 3 Retro Rosa Palo","original":780,"sale":"600","sizes":["36","37","38","39","40","41"],"img":"images/product_33.jpg"},{"name":"Air Jordan 4 Retro Negro/Rojo/Gris","original":780,"sale":"600","sizes":["37","38","39","40","41","42","43","44"],"img":"images/product_34.jpg"},{"name":"Golden Goose Super-Star Plateado Glitter","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_35.jpg"},{"name":"Golden Goose Super-Star Blanco/Cognac","original":780,"sale":"600","sizes":["36","37","38","39","40"],"img":"images/product_36.jpg"},{"name":"Air Jordan 3 Retro Blanco/Durazno","original":780,"sale":"600","sizes":["36","37","38","39","41","42","43"],"img":"images/product_37.jpg"},{"name":"Air Jordan 3 Retro Blanco/Azul","original":780,"sale":"600","sizes":["36","37","38","40","41","42","43"],"img":"images/product_38.jpg"},{"name":"Air Jordan 3 Retro Blanco/Azul Rey","original":780,"sale":"600","sizes":["37","38","39","40","41","42","43"],"img":"images/product_39.jpg"},{"name":"Air Jordan 3 Retro Blanco/Negro","original":780,"sale":"600","sizes":["36","37","38","39","40","41","42"],"img":"images/product_40.jpg"},{"name":"Asics Modelo por confirmar Rosa/Gris","original":780,"sale":"600","sizes":["36","37","38","39","41","42"],"img":"images/product_41.jpg"},{"name":"Air Jordan 4 Retro Blanco/Plateado","original":780,"sale":"600","sizes":["36","38","39","40","42","43"],"img":"images/product_42.jpg"},{"name":"Air Jordan 4 Retro Blanco/Rosa","original":780,"sale":"600","sizes":["36","37","38","39","40","42","43"],"img":"images/product_43.jpg"},{"name":"Air Jordan 4 Retro Blanco/Rojo","original":780,"sale":"600","sizes":["36","37","38","39","41","42","43"],"img":"images/product_44.jpg"},{"name":"Air Jordan 3 Retro Blanco/Azul (Racer Blue)","original":780,"sale":"600","sizes":["36","37","38","40","41","42","43"],"img":"images/product_45.jpg"},{"name":"Nike Air Max Plus Negro Multicolor","original":780,"sale":"400","sizes":["36","37","38","39","41","42","43"],"img":"images/product_46.jpg"},{"name":"Nike Air Max Morado/Negro","original":780,"sale":"400","sizes":["36","37","40","41","42","43"],"img":"images/product_47.jpg"},{"name":"Nike Air Force 1 Blanco","original":null,"sale":"2x1000","sizes":["36","37","39","40","41","42"],"img":"images/product_48.jpg"}]}</script>
+<script id="app-script">
+(function(){
+  "use strict";
+
+  // HEAD_TEXT / BODY_SHELL are escaped copies of this page's own static
+  // head (title/style) and body shell (everything except the two script
+  // tags), baked in at build time. buildFullDocument() combines them with
+  // fresh data and a LIVE copy of this very script (read straight off the
+  // DOM, so it never needs to duplicate or re-escape itself) to produce a
+  // complete replacement document for artifact.publish().
+  var HEAD_TEXT = "<meta charset=\"UTF-8\">\n<title>Punto Zapas Catálogo</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n<link href=\"https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@500;600;700;800&display=swap\" rel=\"stylesheet\">\n<style>\n  :root{\n    --ink:#0b2e1d;\n    --ink-2:#123825;\n    --paper:#f5f8f3;\n    --card:#ffffff;\n    --line:#e1e7de;\n    --lime:#b6f229;\n    --lime-deep:#6fa60f;\n    --text:#0e2118;\n    --muted:#6b7a71;\n    --danger:#c0392b;\n    --shadow: 0 1px 2px rgba(15,35,24,.06), 0 10px 24px -14px rgba(15,35,24,.22);\n  }\n  @media (prefers-color-scheme: dark){\n    :root:not([data-theme=\"light\"]){\n      --ink:#081c12;\n      --ink-2:#0f2c1c;\n      --paper:#0c1d14;\n      --card:#12281c;\n      --line:#1f3d2b;\n      --text:#e9f3ec;\n      --muted:#8fa89a;\n      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5);\n    }\n  }\n  :root[data-theme=\"dark\"]{\n    --ink:#081c12;\n    --ink-2:#0f2c1c;\n    --paper:#0c1d14;\n    --card:#12281c;\n    --line:#1f3d2b;\n    --text:#e9f3ec;\n    --muted:#8fa89a;\n    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5);\n  }\n\n  *{box-sizing:border-box;}\n  body{\n    background:var(--paper);\n    color:var(--text);\n    font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;\n    -webkit-font-smoothing:antialiased;\n  }\n  img{display:block;}\n  h1,h2,h3{margin:0;text-wrap:balance;}\n  p{margin:0;}\n  a{color:inherit;text-decoration:none;}\n  button{font-family:inherit;}\n  ::selection{background:var(--lime);color:var(--ink);}\n\n  /* ---------- top bar ---------- */\n  .topbar{\n    position:sticky;top:env(safe-area-inset-top,0px);z-index:40;\n    background:var(--ink);\n    border-bottom:1px solid rgba(182,242,41,.15);\n  }\n  .topbar-inner{\n    max-width:1180px;margin:0 auto;padding:10px 20px;\n    display:flex;align-items:center;gap:12px;\n  }\n  .brand{display:flex;align-items:center;gap:10px;margin-right:auto;}\n  .brand-mark{\n    width:40px;height:40px;border-radius:10px;overflow:hidden;flex:none;\n    background:var(--ink-2);\n  }\n  .brand-mark img{\n    width:100%;height:100%;object-fit:cover;object-position:50% 18%;\n    transform:scale(1.55);\n  }\n  .brand-word{\n    font-family:'Anton',sans-serif;color:#fff;font-size:19px;\n    letter-spacing:.02em;line-height:1;\n  }\n  .brand-word span{color:var(--lime);}\n  .top-actions{display:flex;align-items:center;gap:8px;}\n  .top-cta{\n    display:flex;align-items:center;gap:8px;\n    background:var(--lime);color:var(--ink);\n    font-weight:800;font-size:13px;letter-spacing:.01em;\n    padding:9px 14px;border-radius:999px;border:0;cursor:pointer;\n    transition:transform .15s ease, box-shadow .15s ease;\n  }\n  .top-cta:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px rgba(182,242,41,.55);}\n  .top-cta svg{width:16px;height:16px;flex:none;}\n  .top-cta.ghost{background:transparent;color:#eaf3ec;border:1px solid rgba(255,255,255,.22);}\n  .top-cta.ghost:hover{background:rgba(255,255,255,.08);box-shadow:none;}\n  .top-cta:disabled{opacity:.55;cursor:default;transform:none!important;}\n  @media (max-width:560px){\n    .top-cta .top-cta-label{display:none;}\n    .top-cta{padding:10px;}\n    .brand-word{font-size:16px;}\n  }\n\n  /* ---------- hero ---------- */\n  .hero{\n    background:\n      radial-gradient(720px 360px at 85% -10%, rgba(182,242,41,.16), transparent 60%),\n      linear-gradient(165deg, var(--ink), var(--ink-2));\n    color:#fff;\n    padding-block:44px 40px;\n    border-bottom:1px solid rgba(182,242,41,.12);\n  }\n  .hero-inner{max-width:1180px;margin:0 auto;padding-inline:20px;}\n  .eyebrow{\n    display:inline-block;font-size:12px;font-weight:800;letter-spacing:.14em;\n    color:var(--lime);text-transform:uppercase;margin-bottom:14px;\n    animation:rise .5s ease both;\n  }\n  .hero h1{\n    font-family:'Anton',sans-serif;font-weight:400;\n    font-size:clamp(34px,6vw,58px);line-height:.98;letter-spacing:.01em;\n    color:#fff;animation:rise .55s .05s ease both;\n  }\n  .hero h1 em{font-style:normal;color:var(--lime);}\n  .hero-lead{\n    margin-top:14px;max-width:56ch;color:#cfe4d7;font-size:15.5px;line-height:1.55;\n    animation:rise .55s .1s ease both;\n  }\n  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}\n  @media (prefers-reduced-motion:reduce){\n    .eyebrow,.hero h1,.hero-lead,.steps li{animation:none!important;}\n  }\n\n  .steps{\n    list-style:none;margin:26px 0 0;padding:0;\n    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;\n  }\n  .steps li{\n    animation:rise .5s ease both; animation-delay:calc(.12s + var(--i,0)*.06s);\n    background:rgba(255,255,255,.05);\n    border:1px solid rgba(182,242,41,.18);\n    border-radius:14px;padding:14px 14px 16px;\n  }\n  .steps .num{\n    display:flex;align-items:center;justify-content:center;\n    width:26px;height:26px;border-radius:50%;\n    background:var(--lime);color:var(--ink);\n    font-family:'Anton',sans-serif;font-size:13px;margin-bottom:10px;\n  }\n  .steps .step-title{font-weight:800;font-size:14px;color:#fff;}\n  .steps .step-desc{margin-top:4px;font-size:13px;color:#b9cfc1;line-height:1.4;}\n\n  .contact-row{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;}\n  .chip{\n    display:inline-flex;align-items:center;gap:7px;\n    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);\n    color:#eaf3ec;font-size:13px;font-weight:600;\n    padding:8px 13px;border-radius:999px;\n  }\n  .chip.wa{background:var(--lime);color:var(--ink);border-color:transparent;font-weight:800;}\n  .chip svg{width:14px;height:14px;flex:none;}\n\n  .pdf-row{margin-top:14px;}\n  .pdf-link{\n    display:inline-flex;align-items:center;gap:8px;\n    font-size:13px;font-weight:700;color:#cfe4d7;\n    border:0;border-bottom:1px dashed rgba(207,228,215,.5);padding:0 0 1px;\n    background:none;cursor:pointer;\n  }\n  .pdf-link:hover{color:var(--lime);border-color:var(--lime);}\n  .pdf-link svg{width:14px;height:14px;flex:none;}\n  .pdf-link:disabled{opacity:.6;cursor:default;}\n\n  /* ---------- filter bar ---------- */\n  .filter-bar{\n    position:sticky;top:calc(61px + env(safe-area-inset-top,0px));z-index:30;\n    background:var(--paper);\n    border-bottom:1px solid var(--line);\n    padding-block:12px;\n  }\n  .filter-inner{\n    max-width:1180px;margin:0 auto;padding-inline:20px;\n    display:flex;flex-wrap:wrap;gap:10px;align-items:center;\n  }\n  .search{\n    flex:1 1 220px;min-width:0;\n    display:flex;align-items:center;gap:8px;\n    background:var(--card);border:1px solid var(--line);border-radius:11px;\n    padding:9px 12px;\n  }\n  .search svg{width:16px;height:16px;color:var(--muted);flex:none;}\n  .search input{\n    border:0;outline:0;background:transparent;color:var(--text);\n    font-family:inherit;font-size:14px;width:100%;\n  }\n  .search input::placeholder{color:var(--muted);}\n  .cats{display:flex;flex-wrap:wrap;gap:8px;}\n  .cat-btn{\n    font-size:12.5px;font-weight:700;letter-spacing:.01em;\n    background:var(--card);color:var(--text);border:1px solid var(--line);\n    padding:8px 13px;border-radius:999px;cursor:pointer;\n    transition:background .15s ease, color .15s ease, border-color .15s ease;\n  }\n  .cat-btn .n{color:var(--muted);font-weight:600;}\n  .cat-btn[aria-pressed=\"true\"]{background:var(--ink);color:#fff;border-color:var(--ink);}\n  .cat-btn[aria-pressed=\"true\"] .n{color:var(--lime);}\n\n  .result-note{\n    max-width:1180px;margin:14px auto 0;padding-inline:20px;\n    font-size:13px;color:var(--muted);\n  }\n\n  /* ---------- grid ---------- */\n  .grid{\n    max-width:1180px;margin:0 auto;padding:22px 20px 8px;\n    display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:18px;\n  }\n  .card{\n    background:var(--card);border:1px solid var(--line);border-radius:16px;\n    overflow:hidden;box-shadow:var(--shadow);\n    display:flex;flex-direction:column;position:relative;\n    transition:transform .18s ease, box-shadow .18s ease;\n  }\n  .card:hover{transform:translateY(-3px);}\n  .card-media{\n    position:relative;aspect-ratio:1/1;background:#fff;\n    display:flex;align-items:center;justify-content:center;\n    border-bottom:1px solid var(--line);\n  }\n  .card-media img{width:88%;height:88%;object-fit:contain;}\n  .badge{\n    position:absolute;top:10px;left:10px;\n    font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;\n    background:var(--lime);color:var(--ink);padding:5px 9px;border-radius:999px;\n  }\n  .badge.promo{background:var(--ink);color:var(--lime);}\n  .edit-fab{\n    position:absolute;top:8px;right:8px;z-index:2;\n    width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;\n    background:var(--ink);color:var(--lime);\n    display:flex;align-items:center;justify-content:center;\n    box-shadow:0 4px 10px -2px rgba(0,0,0,.4);\n  }\n  .edit-fab svg{width:15px;height:15px;}\n  .card-body{padding:14px 14px 16px;display:flex;flex-direction:column;gap:10px;flex:1;}\n  .card-name{font-size:14.5px;font-weight:800;line-height:1.28;min-height:2.56em;}\n  .price-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}\n  .price-original{font-size:12.5px;color:var(--muted);text-decoration:line-through;}\n  .price-sale{\n    font-family:'Anton',sans-serif;font-weight:400;font-size:21px;\n    background:var(--ink);color:var(--lime);\n    padding:3px 10px;border-radius:8px;letter-spacing:.01em;\n    font-variant-numeric:tabular-nums;\n  }\n  .sizes-label{\n    font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);\n    text-transform:uppercase;\n  }\n  .size-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}\n  .size-pills span{\n    font-size:12px;font-weight:700;color:var(--text);\n    border:1px solid var(--line);border-radius:7px;\n    padding:3px 7px;font-variant-numeric:tabular-nums;\n  }\n  .buy-btn{\n    margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;\n    background:var(--ink);color:#fff;font-weight:800;font-size:13.5px;\n    padding:11px 12px;border-radius:11px;\n    transition:background .15s ease, transform .15s ease;\n  }\n  .buy-btn:hover{background:var(--ink-2);transform:translateY(-1px);}\n  .buy-btn svg{width:16px;height:16px;flex:none;color:var(--lime);}\n\n  .add-card{\n    border:2px dashed var(--line);border-radius:16px;background:transparent;\n    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;\n    min-height:220px;cursor:pointer;color:var(--muted);font-weight:700;font-size:13.5px;\n  }\n  .add-card:hover{border-color:var(--lime-deep);color:var(--text);}\n  .add-card svg{width:26px;height:26px;}\n\n  .empty{max-width:1180px;margin:0 auto;padding:60px 20px;text-align:center;color:var(--muted);}\n\n  /* ---------- footer ---------- */\n  footer{\n    margin-top:30px;background:var(--ink);color:#eaf3ec;\n    padding-block:36px calc(28px + env(safe-area-inset-bottom,0px));\n  }\n  .footer-inner{\n    max-width:1180px;margin:0 auto;padding-inline:20px;\n    display:flex;flex-wrap:wrap;gap:28px;justify-content:space-between;\n  }\n  .footer-brand{display:flex;align-items:center;gap:12px;}\n  .footer-mark{width:52px;height:52px;border-radius:12px;overflow:hidden;flex:none;background:var(--ink-2);}\n  .footer-mark img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;transform:scale(1.55);}\n  .footer-tag{font-family:'Anton',sans-serif;font-size:14px;letter-spacing:.06em;color:var(--lime);}\n  .footer-sub{font-size:12px;color:#9fb6a8;margin-top:2px;}\n  .footer-contact{display:flex;flex-direction:column;gap:8px;font-size:13.5px;min-width:220px;}\n  .footer-contact a{display:flex;align-items:center;gap:8px;color:#eaf3ec;}\n  .footer-contact a:hover{color:var(--lime);}\n  .footer-contact svg{width:15px;height:15px;color:var(--lime);flex:none;}\n  .footer-bottom{\n    max-width:1180px;margin:26px auto 0;padding-inline:20px;\n    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;\n    font-size:12px;color:#8fa79a;\n    padding-top:16px;border-top:1px solid rgba(255,255,255,.1);\n  }\n  .footer-bottom a{color:#8fa79a;}\n  .footer-bottom a:hover{color:var(--lime);}\n\n  /* ---------- edit mode ---------- */\n  body.editing .edit-fab{display:flex;}\n  .edit-fab{display:none;}\n  body.editing .add-card{display:flex;}\n  .add-card{display:none;}\n\n  .edit-bar{\n    position:fixed;left:0;right:0;bottom:0;z-index:60;\n    display:none;\n    background:var(--ink);color:#fff;\n    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));\n    box-shadow:0 -8px 24px -10px rgba(0,0,0,.4);\n  }\n  body.editing .edit-bar{display:flex;}\n  .edit-bar-inner{\n    max-width:1180px;margin:0 auto;width:100%;\n    display:flex;align-items:center;gap:10px;flex-wrap:wrap;\n  }\n  .edit-status{font-size:12.5px;color:#b9cfc1;flex:1 1 160px;min-width:120px;}\n  .edit-bar button{\n    border:0;border-radius:10px;padding:10px 14px;font-weight:800;font-size:13px;cursor:pointer;\n  }\n  .btn-save{background:var(--lime);color:var(--ink);}\n  .btn-contact{background:rgba(255,255,255,.1);color:#fff;}\n  .btn-exit{background:transparent;color:#cfe4d7;border:1px solid rgba(255,255,255,.2)!important;}\n\n  .modal-backdrop{\n    position:fixed;inset:0;background:rgba(4,12,8,.55);z-index:70;\n    display:flex;align-items:flex-end;justify-content:center;\n    padding:0;\n  }\n  @media (min-width:640px){ .modal-backdrop{align-items:center;padding:24px;} }\n  .modal{\n    background:var(--card);color:var(--text);width:100%;max-width:520px;\n    max-height:92vh;overflow-y:auto;\n    border-radius:18px 18px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));\n  }\n  @media (min-width:640px){ .modal{border-radius:18px;} }\n  .modal h2{font-family:'Anton',sans-serif;font-weight:400;font-size:22px;margin-bottom:4px;}\n  .modal .modal-sub{font-size:13px;color:var(--muted);margin-bottom:18px;}\n  .field{margin-bottom:14px;}\n  .field label{display:block;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}\n  .field input, .field textarea{\n    width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;\n    font-family:inherit;font-size:14px;color:var(--text);background:var(--paper);\n  }\n  .field textarea{resize:vertical;min-height:56px;}\n  .field-row{display:flex;gap:10px;}\n  .field-row .field{flex:1;}\n  .field-check{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;}\n  .modal-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}\n  .modal-actions button{\n    flex:1;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:13.5px;cursor:pointer;\n  }\n  .btn-primary{background:var(--ink);color:var(--lime);}\n  .btn-secondary{background:var(--paper);color:var(--text);border:1px solid var(--line)!important;}\n  .btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)!important;flex:none!important;}\n  .modal-close{\n    position:absolute;top:14px;right:14px;background:none;border:0;cursor:pointer;\n    color:var(--muted);width:28px;height:28px;\n  }\n  .modal{position:relative;}\n\n  [hidden]{display:none!important;}\n\n  /* ---------- print ---------- */\n  .print-cover{display:none;}\n  @media print{\n    .topbar, .filter-bar, .result-note, .edit-bar, .edit-fab, .add-card, .modal-backdrop, .pdf-row{display:none!important;}\n    body{background:#fff;}\n    .hero{background:var(--ink)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding-block:26px 22px;}\n    .print-cover{\n      display:flex;align-items:center;justify-content:center;margin-bottom:18px;\n    }\n    .print-cover img{width:150px;height:150px;border-radius:22px;object-fit:cover;-webkit-print-color-adjust:exact;print-color-adjust:exact;}\n    .steps{margin-top:16px;gap:8px;}\n    .steps li{padding:10px 12px 12px;}\n    .contact-row{margin-top:14px;}\n    .grid{grid-template-columns:repeat(2,1fr);gap:10px;padding:10px 18px;}\n    .card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;border-radius:10px;}\n    .card-media{aspect-ratio:auto;height:150px;padding:6px 0;}\n    .card-media img{width:80%;height:80%;}\n    .card-body{padding:9px 10px 10px;gap:6px;}\n    .card-name{font-size:12px;min-height:0;line-height:1.2;}\n    .price-row{gap:6px;}\n    .price-original{font-size:10.5px;}\n    .price-sale{font-size:15px;padding:2px 7px;border-radius:6px;}\n    .sizes-label{font-size:9px;}\n    .size-pills{gap:3px;margin-top:3px;}\n    .size-pills span{font-size:10px;padding:2px 5px;border-radius:5px;}\n    .buy-btn{padding:6px 8px;font-size:10.5px;border-radius:7px;gap:5px;}\n    .buy-btn svg{width:13px;height:13px;}\n    footer{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding-block:20px 16px;}\n    .footer-mark{width:40px;height:40px;}\n  }\n</style>";
+  var BODY_SHELL = "\n\n<div id=\"top\"></div>\n\n<header class=\"topbar\">\n  <div class=\"topbar-inner\">\n    <a class=\"brand\" href=\"#top\">\n      <span class=\"brand-mark\"><img src=\"images/logo.jpg\" alt=\"Punto Zapas\"></span>\n      <span class=\"brand-word\">Punto<span>Zapas</span></span>\n    </a>\n    <div class=\"top-actions\">\n      <button type=\"button\" class=\"top-cta ghost\" id=\"print-btn\" aria-label=\"Exportar PDF\">\n        <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M6 9V2h12v7\"/><path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/><path d=\"M6 14h12v8H6z\"/></svg>\n        <span class=\"top-cta-label\">Exportar PDF</span>\n      </button>\n      <button type=\"button\" class=\"top-cta ghost\" id=\"edit-toggle\" hidden aria-label=\"Editar catálogo\">\n        <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/></svg>\n        <span class=\"top-cta-label\" id=\"edit-toggle-label\">Editar</span>\n      </button>\n      <a class=\"top-cta\" id=\"wa-top\" href=\"https://wa.me/59175503284\" target=\"_blank\" rel=\"noopener\" aria-label=\"Pedir por WhatsApp\">\n        <svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z\"/></svg>\n        <span class=\"top-cta-label\">Pedir por WhatsApp</span>\n      </a>\n    </div>\n  </div>\n</header>\n\n<section class=\"hero\">\n  <div class=\"hero-inner\">\n    <div class=\"print-cover\"><img src=\"images/logo.jpg\" alt=\"Punto Zapas\"></div>\n    <span class=\"eyebrow\" id=\"hero-eyebrow\">Catálogo · 48 pares disponibles</span>\n    <h1>Elige tu <em>par</em>.</h1>\n    <p class=\"hero-lead\">Recorre el catálogo, guarda una captura del modelo que te gustó y envíanosla por WhatsApp — así confirmamos talla y disponibilidad al toque.</p>\n\n    <ol class=\"steps\">\n      <li style=\"--i:0\">\n        <span class=\"num\">1</span>\n        <div class=\"step-title\">Elige tu par</div>\n        <div class=\"step-desc\">Filtra por marca o busca el modelo y color que te gusta.</div>\n      </li>\n      <li style=\"--i:1\">\n        <span class=\"num\">2</span>\n        <div class=\"step-title\">Captura la pantalla</div>\n        <div class=\"step-desc\">Toma un screenshot de la tarjeta con el precio y la talla.</div>\n      </li>\n      <li style=\"--i:2\">\n        <span class=\"num\">3</span>\n        <div class=\"step-title\">Envíanosla por WhatsApp</div>\n        <div class=\"step-desc\">Te confirmamos disponibilidad al momento.</div>\n      </li>\n    </ol>\n\n    <div class=\"contact-row\" id=\"contact-row\">\n      <a class=\"chip wa\" id=\"wa-chip\" href=\"https://wa.me/59175503284\" target=\"_blank\" rel=\"noopener\">\n        <svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z\"/></svg>\n        <span id=\"wa-chip-label\">+591 75503284</span>\n      </a>\n      <a class=\"chip\" id=\"ig-chip\" href=\"https://instagram.com/punto_zapas_ig\" target=\"_blank\" rel=\"noopener\">\n        <svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2.2c2.7 0 3 0 4.1.06 1.1.05 1.8.22 2.2.37.6.23 1 .5 1.4.9.4.4.67.8.9 1.4.15.4.32 1.1.37 2.2.06 1.1.06 1.4.06 4.1s0 3-.06 4.1c-.05 1.1-.22 1.8-.37 2.2-.23.6-.5 1-.9 1.4-.4.4-.8.67-1.4.9-.4.15-1.1.32-2.2.37-1.1.06-1.4.06-4.1.06s-3 0-4.1-.06c-1.1-.05-1.8-.22-2.2-.37-.6-.23-1-.5-1.4-.9-.4-.4-.67-.8-.9-1.4-.15-.4-.32-1.1-.37-2.2C2.2 15 2.2 14.7 2.2 12s0-3 .06-4.1c.05-1.1.22-1.8.37-2.2.23-.6.5-1 .9-1.4.4-.4.8-.67 1.4-.9.4-.15 1.1-.32 2.2-.37C8.1 2.2 8.5 2.2 12 2.2m0-1.8C9.2.4 8.9.4 7.8.5c-1.2.05-2 .23-2.7.5-.75.29-1.4.68-2 1.3-.63.62-1 1.26-1.3 2-.27.7-.45 1.5-.5 2.7C1.2 8.1 1.2 8.5 1.2 12s0 3.9.1 5c.05 1.2.23 2 .5 2.7.29.75.68 1.4 1.3 2 .62.63 1.26 1 2 1.3.7.27 1.5.45 2.7.5 1.1.06 1.5.06 4.2.06s3.1 0 4.2-.06c1.2-.05 2-.23 2.7-.5.75-.29 1.4-.68 2-1.3.63-.62 1-1.26 1.3-2 .27-.7.45-1.5.5-2.7.06-1.1.06-1.5.06-4.2s0-3.1-.06-4.2c-.05-1.2-.23-2-.5-2.7-.29-.75-.68-1.4-1.3-2-.62-.63-1.26-1-2-1.3-.7-.27-1.5-.45-2.7-.5C15.1.4 14.7.4 12 .4z\"/><path d=\"M12 6.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11m0 9.1a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2\"/><circle cx=\"17.8\" cy=\"6.2\" r=\"1.3\"/></svg>\n        <span id=\"ig-chip-label\">@punto_zapas_ig</span>\n      </a>\n      <span class=\"chip\">📍 <span id=\"address-label\">Regimiento Carabineros 224</span></span>\n    </div>\n\n    <div class=\"pdf-row\">\n      <button type=\"button\" class=\"pdf-link\" id=\"pdf-link-btn\">\n        <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><path d=\"M14 2v6h6\"/></svg>\n        <span id=\"pdf-link-label\">Descargar catálogo completo en PDF</span>\n      </button>\n    </div>\n  </div>\n</section>\n\n<div class=\"filter-bar\">\n  <div class=\"filter-inner\">\n    <label class=\"search\">\n      <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m21 21-4.3-4.3\"/></svg>\n      <input id=\"search\" type=\"search\" placeholder=\"Buscar modelo o color…\" autocomplete=\"off\">\n    </label>\n    <div class=\"cats\" id=\"cats\" role=\"group\" aria-label=\"Filtrar por marca\"></div>\n  </div>\n</div>\n\n<p class=\"result-note\" id=\"result-note\"></p>\n\n<main class=\"grid\" id=\"grid\"></main>\n<p class=\"empty\" id=\"empty\" hidden>No encontramos pares con esa búsqueda. Probá con otro modelo o color.</p>\n\n<footer>\n  <div class=\"footer-inner\">\n    <div class=\"footer-brand\">\n      <span class=\"footer-mark\"><img src=\"images/logo.jpg\" alt=\"Punto Zapas\"></span>\n      <div>\n        <div class=\"footer-tag\" id=\"footer-tagline\">TU ESTILO, NUESTRO PUNTO</div>\n        <div class=\"footer-sub\" id=\"footer-sub\">Catálogo actualizado · 48 pares en oferta</div>\n      </div>\n    </div>\n    <div class=\"footer-contact\">\n      <a id=\"wa-footer\" href=\"https://wa.me/59175503284\" target=\"_blank\" rel=\"noopener\">\n        <svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z\"/></svg>\n        <span id=\"wa-footer-label\">+591 75503284</span>\n      </a>\n      <a id=\"ig-footer\" href=\"https://instagram.com/punto_zapas_ig\" target=\"_blank\" rel=\"noopener\">\n        <svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2.2c2.7 0 3 0 4.1.06 1.1.05 1.8.22 2.2.37.6.23 1 .5 1.4.9.4.4.67.8.9 1.4.15.4.32 1.1.37 2.2.06 1.1.06 1.4.06 4.1s0 3-.06 4.1c-.05 1.1-.22 1.8-.37 2.2-.23.6-.5 1-.9 1.4-.4.4-.8.67-1.4.9-.4.15-1.1.32-2.2.37-1.1.06-1.4.06-4.1.06s-3 0-4.1-.06c-1.1-.05-1.8-.22-2.2-.37-.6-.23-1-.5-1.4-.9-.4-.4-.67-.8-.9-1.4-.15-.4-.32-1.1-.37-2.2C2.2 15 2.2 14.7 2.2 12s0-3 .06-4.1c.05-1.1.22-1.8.37-2.2.23-.6.5-1 .9-1.4.4-.4.8-.67 1.4-.9.4-.15 1.1-.32 2.2-.37C8.1 2.2 8.5 2.2 12 2.2m0-1.8C9.2.4 8.9.4 7.8.5c-1.2.05-2 .23-2.7.5-.75.29-1.4.68-2 1.3-.63.62-1 1.26-1.3 2-.27.7-.45 1.5-.5 2.7C1.2 8.1 1.2 8.5 1.2 12s0 3.9.1 5c.05 1.2.23 2 .5 2.7.29.75.68 1.4 1.3 2 .62.63 1.26 1 2 1.3.7.27 1.5.45 2.7.5 1.1.06 1.5.06 4.2.06s3.1 0 4.2-.06c1.2-.05 2-.23 2.7-.5.75-.29 1.4-.68 2-1.3.63-.62 1-1.26 1.3-2 .27-.7.45-1.5.5-2.7.06-1.1.06-1.5.06-4.2s0-3.1-.06-4.2c-.05-1.2-.23-2-.5-2.7-.29-.75-.68-1.4-1.3-2-.62-.63-1.26-1-2-1.3-.7-.27-1.5-.45-2.7-.5C15.1.4 14.7.4 12 .4z\"/><path d=\"M12 6.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11m0 9.1a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2\"/><circle cx=\"17.8\" cy=\"6.2\" r=\"1.3\"/></svg>\n        <span id=\"ig-footer-label\">@punto_zapas_ig</span>\n      </a>\n      <span style=\"display:flex;align-items:center;gap:8px;\">\n        <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>\n        <span id=\"address-footer-label\">Regimiento Carabineros 224</span>\n      </span>\n    </div>\n  </div>\n  <div class=\"footer-bottom\">\n    <span>© Punto Zapas</span>\n    <a href=\"#top\">Volver arriba ↑</a>\n  </div>\n</footer>\n\n<!-- ============ edit mode UI (owner only) ============ -->\n<div class=\"edit-bar\">\n  <div class=\"edit-bar-inner\">\n    <span class=\"edit-status\" id=\"edit-status\">Modo edición — los cambios se ven en vivo. Guarda para publicarlos.</span>\n    <button type=\"button\" class=\"btn-contact\" id=\"edit-contact-btn\">Datos de contacto</button>\n    <button type=\"button\" class=\"btn-save\" id=\"save-btn\">Guardar cambios</button>\n    <button type=\"button\" class=\"btn-exit\" id=\"exit-edit-btn\">Salir sin guardar</button>\n  </div>\n</div>\n\n<div class=\"modal-backdrop\" id=\"product-modal\" hidden>\n  <div class=\"modal\">\n    <button type=\"button\" class=\"modal-close\" id=\"product-modal-close\" aria-label=\"Cerrar\">\n      <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg>\n    </button>\n    <h2 id=\"product-modal-title\">Editar producto</h2>\n    <p class=\"modal-sub\">Los cambios se aplican al catálogo cuando guardes.</p>\n    <div class=\"field\">\n      <label for=\"f-name\">Nombre / color</label>\n      <input id=\"f-name\" type=\"text\" placeholder=\"Air Jordan 4 Retro Blanco/Verde\">\n    </div>\n    <div class=\"field-row\">\n      <div class=\"field\">\n        <label for=\"f-original\">Precio normal (Bs)</label>\n        <input id=\"f-original\" type=\"text\" inputmode=\"numeric\" placeholder=\"780\">\n      </div>\n      <div class=\"field\">\n        <label for=\"f-sale\">Precio oferta / promo</label>\n        <input id=\"f-sale\" type=\"text\" placeholder=\"600 ó 2x1000\">\n      </div>\n    </div>\n    <div class=\"field\">\n      <label for=\"f-sizes\">Tallas disponibles (separadas por coma)</label>\n      <input id=\"f-sizes\" type=\"text\" placeholder=\"36, 37, 38, 39, 40\">\n    </div>\n    <div class=\"field\">\n      <label for=\"f-img\">URL de la imagen</label>\n      <input id=\"f-img\" type=\"text\" placeholder=\"images/product_01.jpg o https://...\">\n    </div>\n    <div class=\"modal-actions\">\n      <button type=\"button\" class=\"btn-secondary\" id=\"delete-product-btn\">Eliminar</button>\n      <button type=\"button\" class=\"btn-primary\" id=\"save-product-btn\">Aplicar</button>\n    </div>\n  </div>\n</div>\n\n<div class=\"modal-backdrop\" id=\"contact-modal\" hidden>\n  <div class=\"modal\">\n    <button type=\"button\" class=\"modal-close\" id=\"contact-modal-close\" aria-label=\"Cerrar\">\n      <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg>\n    </button>\n    <h2>Datos de contacto</h2>\n    <p class=\"modal-sub\">Se usan en la portada, el pie de página y los botones de WhatsApp.</p>\n    <div class=\"field\">\n      <label for=\"m-whatsapp\">WhatsApp (con código de país, solo números)</label>\n      <input id=\"m-whatsapp\" type=\"text\" placeholder=\"59175503284\">\n    </div>\n    <div class=\"field\">\n      <label for=\"m-instagram\">Usuario de Instagram</label>\n      <input id=\"m-instagram\" type=\"text\" placeholder=\"punto_zapas_ig\">\n    </div>\n    <div class=\"field\">\n      <label for=\"m-address\">Dirección</label>\n      <input id=\"m-address\" type=\"text\" placeholder=\"Regimiento Carabineros 224\">\n    </div>\n    <div class=\"field\">\n      <label for=\"m-tagline\">Frase / eslogan del pie de página</label>\n      <input id=\"m-tagline\" type=\"text\" placeholder=\"TU ESTILO, NUESTRO PUNTO\">\n    </div>\n    <div class=\"modal-actions\">\n      <button type=\"button\" class=\"btn-primary\" id=\"save-contact-btn\" style=\"flex:1;\">Aplicar</button>\n    </div>\n  </div>\n</div>\n\n";
+
+  function buildFullDocument(newState){
+    var dataTag = '<script type="application/json" id="product-data">' +
+      JSON.stringify(newState) + '<\/script>';
+    var appTag = document.getElementById('app-script').outerHTML;
+    return '<!doctype html>\n<html lang="es">\n<head>\n' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
+      HEAD_TEXT + '\n</head>\n<body>\n' + BODY_SHELL + dataTag + appTag + '\n</body>\n</html>';
+  }
+
+  var STATE = JSON.parse(document.getElementById('product-data').textContent);
+  var META = STATE.meta;
+  var DATA = STATE.products;
+  var editMode = false;
+  var dirty = false;
+  var editingIndex = null;
+
+  function brandOf(name){
+    if (/Air Jordan 4/i.test(name)) return "Air Jordan 4";
+    if (/Air Jordan 3/i.test(name)) return "Air Jordan 3";
+    if (/Golden Goose/i.test(name)) return "Golden Goose";
+    if (/Asics/i.test(name)) return "Asics";
+    if (/Nike/i.test(name)) return "Nike";
+    return "Otros";
+  }
+
+  function formatSale(sale){
+    if (/^\d+$/.test(sale)) return "Bs " + sale;
+    var m = /^(\d+)x(\d+)$/.exec(sale);
+    if (m) return m[1] + " x Bs " + Number(m[2]).toLocaleString('es-BO');
+    return sale;
+  }
+
+  function waLink(p){
+    var priceLine = p.original
+      ? "Precio oferta: Bs " + p.sale + " (antes Bs " + p.original + ")"
+      : "Promo: " + formatSale(p.sale);
+    var msg = "Hola Punto Zapas 👋 Quiero este par:\n\n" +
+      p.name + "\n" + priceLine + "\n\nTe envío la captura de pantalla para confirmar disponibilidad y talla 📸";
+    return "https://wa.me/" + META.whatsapp + "?text=" + encodeURIComponent(msg);
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  var grid = document.getElementById('grid');
+  var empty = document.getElementById('empty');
+  var note = document.getElementById('result-note');
+  var catsEl = document.getElementById('cats');
+  var searchInput = document.getElementById('search');
+  var activeCat = "Todos";
+  var activeQuery = "";
+
+  function cardHtml(p, i){
+    var priceBlock = p.original
+      ? '<span class="price-original">Bs ' + p.original + '</span><span class="price-sale">Bs ' + p.sale + '</span>'
+      : '<span class="price-sale">' + formatSale(p.sale) + '</span>';
+    var badge = p.original
+      ? '<span class="badge">Oferta</span>'
+      : '<span class="badge promo">Promo</span>';
+    var sizes = p.sizes.map(function(s){ return '<span>' + escapeHtml(s) + '</span>'; }).join('');
+    return (
+      '<article class="card" data-index="' + i + '" data-brand="' + brandOf(p.name) + '" data-name="' + escapeHtml(p.name.toLowerCase()) + '">' +
+        '<div class="card-media">' +
+          '<img src="' + escapeHtml(p.img) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">' +
+          badge +
+          '<button type="button" class="edit-fab" data-edit="' + i + '" aria-label="Editar producto">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<h3 class="card-name">' + escapeHtml(p.name) + '</h3>' +
+          '<div class="price-row">' + priceBlock + '</div>' +
+          '<div>' +
+            '<div class="sizes-label">Tallas disponibles</div>' +
+            '<div class="size-pills">' + sizes + '</div>' +
+          '</div>' +
+          '<a class="buy-btn" href="' + waLink(p) + '" target="_blank" rel="noopener">' +
+            '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5c1.5.9 3.3 1.4 5.2 1.4 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.1c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3 .9.9-2.9-.2-.3C3.7 14.9 3.2 13.5 3.2 12c0-4.8 3.9-8.8 8.8-8.8s8.8 3.9 8.8 8.8-3.9 8.8-8.8 8.8zm4.8-6.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.6.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.6-1.4-1.8-.1-.2 0-.4.1-.5.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 3 4.7 4.1.6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.3-.1-.1-.3-.2-.5-.3z"/></svg>' +
+            'Pedir por WhatsApp' +
+          '</a>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  var addCardHtml =
+    '<button type="button" class="add-card" id="add-product-btn">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>' +
+      'Agregar producto' +
+    '</button>';
+
+  function renderGrid(){
+    grid.innerHTML = DATA.map(cardHtml).join('') + addCardHtml;
+    document.getElementById('add-product-btn').addEventListener('click', function(){ openProductModal(null); });
+    renderCats();
+    applyFilter();
+  }
+
+  function renderCats(){
+    var order = ["Todos","Air Jordan 4","Air Jordan 3","Golden Goose","Asics","Nike","Otros"];
+    var counts = { Todos: DATA.length };
+    DATA.forEach(function(p){ var b = brandOf(p.name); counts[b] = (counts[b]||0) + 1; });
+    catsEl.innerHTML = order.filter(function(c){ return c === "Todos" || counts[c]; }).map(function(c, i){
+      var pressed = c === activeCat;
+      return '<button class="cat-btn" data-cat="' + c + '" aria-pressed="' + pressed + '">' +
+        c + ' <span class="n">' + counts[c] + '</span></button>';
+    }).join('');
+  }
+
+  function applyFilter(){
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'));
+    var visible = 0;
+    cards.forEach(function(el){
+      var matchesCat = activeCat === "Todos" || el.dataset.brand === activeCat;
+      var matchesQuery = !activeQuery || el.dataset.name.indexOf(activeQuery) !== -1;
+      var show = matchesCat && matchesQuery;
+      el.hidden = !show;
+      if (show) visible++;
+    });
+    empty.hidden = visible !== 0;
+    note.textContent = visible === DATA.length
+      ? "Mostrando los " + DATA.length + " pares del catálogo."
+      : "Mostrando " + visible + " de " + DATA.length + " pares.";
+  }
+
+  catsEl.addEventListener('click', function(e){
+    var btn = e.target.closest('.cat-btn');
+    if (!btn) return;
+    activeCat = btn.dataset.cat;
+    renderCats();
+    applyFilter();
+  });
+  searchInput.addEventListener('input', function(e){
+    activeQuery = e.target.value.trim().toLowerCase();
+    applyFilter();
+  });
+
+  grid.addEventListener('click', function(e){
+    var editBtn = e.target.closest('.edit-fab');
+    if (editBtn){ openProductModal(Number(editBtn.dataset.edit)); }
+  });
+
+  // ---------------- contact / meta rendering ----------------
+  function applyMeta(){
+    var waHref = "https://wa.me/" + META.whatsapp;
+    var waDisplay = "+" + META.whatsapp.slice(0,3) + " " + META.whatsapp.slice(3);
+    ["wa-top","wa-chip","wa-footer"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.href = waHref;
+    });
+    ["wa-chip-label","wa-footer-label"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.textContent = waDisplay;
+    });
+    var igHref = "https://instagram.com/" + META.instagram;
+    ["ig-chip","ig-footer"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.href = igHref;
+    });
+    ["ig-chip-label","ig-footer-label"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.textContent = "@" + META.instagram;
+    });
+    ["address-label","address-footer-label"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.textContent = META.address;
+    });
+    var footerTag = document.getElementById('footer-tagline');
+    if (footerTag) footerTag.textContent = META.tagline;
+    var footerSub = document.getElementById('footer-sub');
+    if (footerSub) footerSub.textContent = "Catálogo actualizado · " + DATA.length + " pares en oferta";
+    var eyebrow = document.getElementById('hero-eyebrow');
+    if (eyebrow) eyebrow.textContent = "Catálogo · " + DATA.length + " pares disponibles";
+  }
+
+  // ---------------- product modal ----------------
+  var productModal = document.getElementById('product-modal');
+  function openProductModal(index){
+    editingIndex = index;
+    var p = index === null ? { name:"", original:780, sale:"600", sizes:[], img:"" } : DATA[index];
+    document.getElementById('product-modal-title').textContent = index === null ? "Agregar producto" : "Editar producto";
+    document.getElementById('f-name').value = p.name || "";
+    document.getElementById('f-original').value = p.original || "";
+    document.getElementById('f-sale').value = p.sale || "";
+    document.getElementById('f-sizes').value = (p.sizes || []).join(", ");
+    document.getElementById('f-img').value = p.img || "";
+    document.getElementById('delete-product-btn').hidden = index === null;
+    resetDeleteArm();
+    productModal.hidden = false;
+  }
+  function closeProductModal(){ productModal.hidden = true; editingIndex = null; resetDeleteArm(); }
+  document.getElementById('product-modal-close').addEventListener('click', closeProductModal);
+  productModal.addEventListener('click', function(e){ if (e.target === productModal) closeProductModal(); });
+
+  document.getElementById('save-product-btn').addEventListener('click', function(){
+    var name = document.getElementById('f-name').value.trim();
+    if (!name){ document.getElementById('f-name').focus(); return; }
+    var originalRaw = document.getElementById('f-original').value.trim();
+    var sale = document.getElementById('f-sale').value.trim() || "0";
+    var sizes = document.getElementById('f-sizes').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var img = document.getElementById('f-img').value.trim() || "images/logo.jpg";
+    var product = {
+      name: name,
+      original: originalRaw ? Number(originalRaw) : null,
+      sale: sale,
+      sizes: sizes,
+      img: img
+    };
+    if (editingIndex === null){ DATA.push(product); }
+    else { DATA[editingIndex] = product; }
+    dirty = true;
+    updateEditStatus();
+    renderGrid();
+    closeProductModal();
+  });
+
+  var deleteBtn = document.getElementById('delete-product-btn');
+  var deleteArmed = false;
+  var deleteRevertTimer = null;
+  function resetDeleteArm(){
+    deleteArmed = false;
+    clearTimeout(deleteRevertTimer);
+    deleteBtn.textContent = 'Eliminar';
+  }
+  deleteBtn.addEventListener('click', function(){
+    if (editingIndex === null) return;
+    if (!deleteArmed){
+      deleteArmed = true;
+      deleteBtn.textContent = '¿Seguro? Toca de nuevo';
+      clearTimeout(deleteRevertTimer);
+      deleteRevertTimer = setTimeout(resetDeleteArm, 5500);
+      return;
+    }
+    resetDeleteArm();
+    DATA.splice(editingIndex, 1);
+    dirty = true;
+    updateEditStatus();
+    renderGrid();
+    closeProductModal();
+  });
+
+  // ---------------- contact modal ----------------
+  var contactModal = document.getElementById('contact-modal');
+  document.getElementById('edit-contact-btn').addEventListener('click', function(){
+    document.getElementById('m-whatsapp').value = META.whatsapp;
+    document.getElementById('m-instagram').value = META.instagram;
+    document.getElementById('m-address').value = META.address;
+    document.getElementById('m-tagline').value = META.tagline;
+    contactModal.hidden = false;
+  });
+  document.getElementById('contact-modal-close').addEventListener('click', function(){ contactModal.hidden = true; });
+  contactModal.addEventListener('click', function(e){ if (e.target === contactModal) contactModal.hidden = true; });
+  document.getElementById('save-contact-btn').addEventListener('click', function(){
+    META.whatsapp = document.getElementById('m-whatsapp').value.trim().replace(/\D/g,'') || META.whatsapp;
+    META.instagram = document.getElementById('m-instagram').value.trim().replace(/^@/,'') || META.instagram;
+    META.address = document.getElementById('m-address').value.trim() || META.address;
+    META.tagline = document.getElementById('m-tagline').value.trim() || META.tagline;
+    dirty = true;
+    updateEditStatus();
+    applyMeta();
+    renderGrid();
+    contactModal.hidden = true;
+  });
+
+  // ---------------- edit mode toggle ----------------
+  var editToggle = document.getElementById('edit-toggle');
+  var editStatus = document.getElementById('edit-status');
+  var printBtn = document.getElementById('print-btn');
+
+  function updateEditStatus(msg){
+    if (msg){ editStatus.textContent = msg; return; }
+    editStatus.textContent = dirty
+      ? "Tienes cambios sin guardar."
+      : "Modo edición — los cambios se ven en vivo. Guarda para publicarlos.";
+  }
+
+  function setEditMode(on){
+    editMode = on;
+    document.body.classList.toggle('editing', on);
+    document.getElementById('edit-toggle-label').textContent = on ? "Salir" : "Editar";
+  }
+
+  editToggle.addEventListener('click', function(){ setEditMode(!editMode); });
+
+  var exitBtn = document.getElementById('exit-edit-btn');
+  var exitArmed = false;
+  var exitRevertTimer = null;
+  exitBtn.addEventListener('click', function(){
+    if (!dirty){ location.reload(); return; }
+    if (!exitArmed){
+      exitArmed = true;
+      exitBtn.textContent = '¿Perder cambios? Toca de nuevo';
+      clearTimeout(exitRevertTimer);
+      exitRevertTimer = setTimeout(function(){
+        exitArmed = false;
+        exitBtn.textContent = 'Salir sin guardar';
+      }, 5500);
+      return;
+    }
+    location.reload();
+  });
+
+  // ---------------- PDF download (uses the "downloads" capability — a
+  // plain <a href="catalogo.pdf"> is silently inert inside the artifact
+  // sandbox, so the file has to be handed to the viewer explicitly) ----------------
+  function downloadCatalogPdf(btn){
+    if (btn.disabled) return;
+    var label = btn.querySelector('span') || btn;
+    var originalText = label.textContent;
+    btn.disabled = true;
+    label.textContent = 'Preparando PDF…';
+
+    function finish(text, delay){
+      if (text) label.textContent = text;
+      setTimeout(function(){
+        btn.disabled = false;
+        label.textContent = originalText;
+      }, delay);
+    }
+
+    var hasClaudeRuntime = typeof claude !== 'undefined' && claude && claude.use;
+    if (!hasClaudeRuntime){
+      // Outside the Claude artifact sandbox (e.g. hosted on Vercel) a
+      // plain download link works fine — no capability needed.
+      var a = document.createElement('a');
+      a.href = 'catalogo.pdf';
+      a.download = 'punto-zapas-catalogo.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      finish('Descargando…', 1500);
+      return;
+    }
+
+    fetch('catalogo.pdf').then(function(res){
+      if (!res.ok) throw { code: 'fetch_failed' };
+      return res.blob();
+    }).then(function(blob){
+      return claude.use('downloads').then(function(downloads){
+        if (!downloads) throw { code: 'unavailable' };
+        return downloads.save({ filename: 'punto-zapas-catalogo.pdf', data: blob });
+      });
+    }).then(function(result){
+      finish(result.status === 'saved' ? 'PDF guardado ✔' : 'PDF enviado ✔', 2500);
+    }).catch(function(err){
+      var code = err && err.code;
+      if (code === 'declined'){ finish(null, 0); return; }
+      if (code === 'fetch_failed'){ finish('No se pudo cargar el PDF.', 3500); return; }
+      finish('Descarga no disponible aquí.', 3500);
+    });
+  }
+
+  printBtn.addEventListener('click', function(){ downloadCatalogPdf(printBtn); });
+  document.getElementById('pdf-link-btn').addEventListener('click', function(){
+    downloadCatalogPdf(document.getElementById('pdf-link-btn'));
+  });
+
+  // ---------------- save / publish ----------------
+  function cleanState(){
+    return {
+      meta: META,
+      products: DATA.map(function(p){
+        return { name:p.name, original:p.original, sale:p.sale, sizes:p.sizes, img:p.img };
+      })
+    };
+  }
+
+  document.getElementById('save-btn').addEventListener('click', function(){
+    saveCatalog();
+  });
+
+  function saveCatalog(){
+    updateEditStatus('Guardando…');
+    if (typeof claude === 'undefined' || !claude || !claude.use){
+      updateEditStatus('Guardado automático no disponible en esta vista. Copia los datos abajo y pídeselos a Claude para que los aplique.');
+      offerFallback();
+      return;
+    }
+    claude.use('artifact').then(function(artifact){
+      if (!artifact){
+        updateEditStatus('Guardado no disponible en esta vista (enlace público o sin permiso). Copia los datos y pídeselos a Claude.');
+        offerFallback();
+        return;
+      }
+      var html = buildFullDocument(cleanState());
+      artifact.publish(html).then(function(){
+        dirty = false;
+        updateEditStatus('Guardado ✔ — todos los que abran el enlace verán estos cambios.');
+      }).catch(function(err){
+        var code = err && err.code;
+        if (code === 'not_writer' || code === 'not_granted'){
+          updateEditStatus('No tienes permiso para guardar aquí. Copia los datos y pídeselos a Claude.');
+        } else if (code === 'capability_disabled'){
+          updateEditStatus('El guardado automático no está disponible en este enlace público. Copia los datos y pídeselos a Claude.');
+        } else if (code === 'conflict'){
+          updateEditStatus('Alguien más guardó cambios primero — recargando…');
+          setTimeout(function(){ location.reload(); }, 1200);
+          return;
+        } else {
+          updateEditStatus('No se pudo guardar (' + (code||'error') + '). Copia los datos y pídeselos a Claude.');
+        }
+        offerFallback();
+      });
+    }).catch(function(){
+      updateEditStatus('Guardado automático no disponible en esta vista. Copia los datos y pídeselos a Claude.');
+      offerFallback();
+    });
+  }
+
+  function offerFallback(){
+    var text = JSON.stringify(cleanState(), null, 2);
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        editStatus.textContent += ' (Datos copiados al portapapeles.)';
+      }).catch(function(){});
+    }
+  }
+
+  // ---------------- owner detection ----------------
+  function initOwnerControls(){
+    if (typeof claude === 'undefined' || !claude || !claude.use){ return; }
+    claude.use('user').then(function(user){
+      if (!user) return;
+      return user.isOwner();
+    }).then(function(isOwner){
+      if (isOwner){ editToggle.hidden = false; }
+    }).catch(function(){});
+  }
+
+  applyMeta();
+  renderGrid();
+  initOwnerControls();
+})();
+</script>

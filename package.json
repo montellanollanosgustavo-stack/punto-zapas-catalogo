@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Catálogo estático de Punto Zapas, con una función serverless para identificar modelos de zapatillas por foto.",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.126.0"
+    "@anthropic-ai/sdk": "^0.126.0",
+    "busboy": "^1.6.0"
   }
 }

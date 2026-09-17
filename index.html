@@ -632,6 +632,7 @@
   }
 
   function formatSale(sale){
+    if (!sale) return null;
     if (/^\d+$/.test(sale)) return "Bs " + sale;
     var m = /^(\d+)x(\d+)$/.exec(sale);
     if (m) return m[1] + " x Bs " + Number(m[2]).toLocaleString('es-BO');
@@ -644,9 +645,10 @@
   }
 
   function waLink(p){
+    var saleText = formatSale(p.sale);
     var priceLine = p.original
       ? "Precio oferta: Bs " + p.sale + " (antes Bs " + p.original + ")"
-      : "Promo: " + formatSale(p.sale);
+      : (saleText ? "Promo: " + saleText : "Precio a confirmar");
     var msg = "Hola Punto Zapas 👋 Quiero este par:\n\n" +
       displayName(p) + "\n" + priceLine + "\n\nTe envío la captura de pantalla para confirmar disponibilidad y talla 📸";
     return "https://wa.me/" + META.whatsapp + "?text=" + encodeURIComponent(msg);
@@ -667,12 +669,13 @@
   var activeQuery = "";
 
   function cardHtml(p, i, arr){
+    var saleText = formatSale(p.sale);
     var priceBlock = p.original
       ? '<span class="price-original">Bs ' + p.original + '</span><span class="price-sale">Bs ' + p.sale + '</span>'
-      : '<span class="price-sale">' + formatSale(p.sale) + '</span>';
+      : (saleText ? '<span class="price-sale">' + escapeHtml(saleText) + '</span>' : '<span class="price-sale price-tbd">Precio a confirmar</span>');
     var badge = p.original
       ? '<span class="badge">Oferta</span>'
-      : '<span class="badge promo">Promo</span>';
+      : (saleText ? '<span class="badge promo">Promo</span>' : '<span class="badge tbd">Nuevo</span>');
     var sizes = p.sizes.map(function(s){ return '<span>' + escapeHtml(s) + '</span>'; }).join('');
     var total = arr.length;
     var needsReview = !p._pending && (!p.name || (p.identification && (p.identification.needsHumanReview || p.identification.verificationStatus === 'error' || p.identification.verificationStatus === 'unavailable')));
@@ -717,6 +720,7 @@
     '</button>';
 
   function renderGrid(){
+    DATA.forEach(ensureProductId);
     grid.innerHTML = DATA.map(cardHtml).join('') + addCardHtml;
     document.getElementById('add-product-btn').addEventListener('click', function(){ openProductModal(null); });
     renderCats();
@@ -770,7 +774,8 @@
       var di = Number(dupBtn.dataset.dup);
       pushHistory();
       var clone = JSON.parse(JSON.stringify(DATA[di]));
-      clone.name = clone.name + ' (copia)';
+      clone._id = newProductId();
+      clone.name = (clone.name || 'Producto sin nombre') + ' (copia)';
       DATA.splice(di + 1, 0, clone);
       dirty = true; updateEditStatus(); renderGrid();
       return;
@@ -836,6 +841,8 @@
     document.getElementById('delete-product-btn').hidden = index === null;
     resetDeleteArm();
     lastIdentification = p.identification || null;
+    if (typeof pendingNewId !== 'undefined') pendingNewId = null;
+    if (typeof reidentifyBusy !== 'undefined') reidentifyBusy = false;
     if (typeof renderIdPanel === 'function') renderIdPanel();
     if (typeof clearImgStatus === 'function') clearImgStatus();
     productModal.hidden = false;
@@ -848,7 +855,7 @@
     var name = document.getElementById('f-name').value.trim();
     if (!name){ document.getElementById('f-name').focus(); return; }
     var originalRaw = document.getElementById('f-original').value.trim();
-    var sale = document.getElementById('f-sale').value.trim() || "0";
+    var sale = document.getElementById('f-sale').value.trim() || null;
     var sizes = document.getElementById('f-sizes').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     var img = document.getElementById('f-img').value.trim() || "images/logo.jpg";
     if (img.indexOf('blob:') === 0){
@@ -856,6 +863,7 @@
       return;
     }
     var product = {
+      _id: (editingIndex !== null && DATA[editingIndex]._id) || pendingNewId || newProductId(),
       name: name,
       original: originalRaw ? Number(originalRaw) : null,
       sale: sale,
@@ -1029,7 +1037,7 @@
       },
       products: DATA.filter(function(p){ return !p._pending; }).map(function(p){
         return {
-          name: p.name, original: p.original, sale: p.sale, sizes: p.sizes, img: p.img,
+          _id: p._id, name: p.name, original: p.original, sale: p.sale, sizes: p.sizes, img: p.img,
           identification: p.identification, manuallyEditedName: p.manuallyEditedName
         };
       })
@@ -1288,13 +1296,12 @@
       needsHumanReview: !!o.needsHumanReview || confidence < 0.85
     };
   }
+  // Only the 4 states the owner needs to act on. Confidence still drives which
+  // of the two "it worked" states shows, but the vocabulary itself is fixed.
   function statusLabelFor(r){
-    if (!r) return 'Identificación no disponible aquí';
-    if (r.verificationStatus === 'error') return 'Error al identificar';
-    if (r.verificationStatus === 'unavailable' || !r.name) return 'Identificación no disponible aquí';
-    if (r.confidence >= 0.85) return 'Identificado';
-    if (r.confidence >= 0.60) return 'Revisar nombre';
-    return 'Identificación incierta';
+    if (!r || !r.name) return 'No se pudo identificar. Reintentar';
+    if (r.confidence >= 0.85) return 'Producto identificado';
+    return 'Revisar nombre';
   }
   function finalizeResult(raw, hash, source){
     var clean = sanitizeIdentification(raw);
@@ -1302,16 +1309,25 @@
     clean.identificationSource = source;
     clean.identificationTimestamp = Date.now();
     clean.statusLabel = statusLabelFor(clean);
+    clean.errorMessage = null;
     return clean;
   }
-  function unavailableResult(hash, kind){
+  // kind: 'unavailable' (no capability here), 'not_granted' (viewer declined),
+  // 'not_configured' (server missing ANTHROPIC_API_KEY), 'error' (a real attempt failed).
+  // `message`, when given, is shown verbatim in the editor — never invented, never hidden.
+  function unavailableResult(hash, kind, message){
+    var statusLabel =
+      kind === 'not_configured' ? 'Falta configurar ANTHROPIC_API_KEY en el servidor.' :
+      kind === 'error' ? 'No se pudo identificar. Reintentar' :
+      'Identificación no disponible aquí';
     return {
       name: '', brand: null, modelFamily: null, colorway: null, visibleProductCode: null,
-      confidence: 0, verificationStatus: kind === 'error' ? 'error' : 'unavailable',
+      confidence: 0, verificationStatus: (kind === 'error' || kind === 'not_configured') ? 'error' : 'unavailable',
       alternativeCandidates: [], needsHumanReview: true,
-      imageHash: hash || null, identificationSource: kind === 'error' ? 'error' : 'none',
+      imageHash: hash || null, identificationSource: (kind === 'error' || kind === 'not_configured') ? 'error' : 'none',
       identificationTimestamp: Date.now(),
-      statusLabel: kind === 'error' ? 'Error al identificar' : 'Identificación no disponible aquí'
+      statusLabel: statusLabel,
+      errorMessage: message || null
     };
   }
   function withSource(identification, source){
@@ -1320,11 +1336,29 @@
     copy.statusLabel = statusLabelFor(copy);
     return copy;
   }
+  // Only ever reuses a PAST SUCCESS. A past failure is never cached — otherwise
+  // re-uploading the same photo to retry would just replay the old failure.
   function findCachedByHash(hash){
     if (!hash) return null;
     for (var i = 0; i < DATA.length; i++){
-      if (DATA[i].identification && DATA[i].identification.imageHash === hash) return DATA[i].identification;
+      var id = DATA[i].identification;
+      if (id && id.imageHash === hash && id.verificationStatus !== 'error' && id.verificationStatus !== 'unavailable'){
+        return id;
+      }
     }
+    return null;
+  }
+  // ---------------- stable product ids (never rely on array position) ----------------
+  function newProductId(){
+    return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+  function ensureProductId(p){
+    if (!p._id) p._id = newProductId();
+    return p._id;
+  }
+  function findProductById(id){
+    if (!id) return null;
+    for (var i = 0; i < DATA.length; i++){ if (DATA[i]._id === id) return DATA[i]; }
     return null;
   }
   function sha256Hex(file){
@@ -1375,50 +1409,82 @@
       return arr;
     });
   }
-  function identifyViaApi(file, hash, existingName){
-    return fileToBase64(file).then(function(b64){
-      return fetch('/api/identify-sneaker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: hash || (Date.now() + '-' + Math.random().toString(36).slice(2)),
-          sourceFilename: file.name,
-          imageBase64: b64,
-          mediaType: file.type || 'image/jpeg',
-          existingName: existingName || null
-        })
+  // Sends the ORIGINAL File as real multipart/form-data — never a blob: URL,
+  // never base64-in-JSON. productId is the product's own stable _id, echoed
+  // back by the server so results are matched by identity, never by request
+  // completion order or array position.
+  function identifyViaApi(file, hash, existingName, productId){
+    var formData = new FormData();
+    formData.append('image', file, file.name || 'sneaker.jpg');
+    formData.append('productId', productId || hash || newProductId());
+    if (existingName) formData.append('existingName', existingName);
+    return fetch('/api/identify-sneaker', { method: 'POST', body: formData }).then(function(res){
+      return res.json().catch(function(){ return null; }).then(function(body){
+        if (!res.ok){
+          var err = new Error((body && body.message) || (body && body.error) || ('http_' + res.status));
+          err.code = body && body.error;
+          throw err;
+        }
+        return body;
       });
-    }).then(function(res){
-      if (!res.ok) return res.json().catch(function(){ return null; }).then(function(body){
-        throw new Error((body && body.error) || ('http_' + res.status));
-      });
-      return res.json();
     }).then(function(json){
-      return finalizeResult(json, hash, 'api');
+      // The server's wire contract uses exactName/model/alternatives/needsReview;
+      // translate to the internal shape the rest of the app (and the sample
+      // transport's own prompt) already uses, so both transports look identical
+      // to everything downstream.
+      var mapped = json && {
+        name: json.exactName,
+        brand: json.brand,
+        modelFamily: json.model,
+        colorway: json.colorway,
+        visibleProductCode: json.visibleProductCode,
+        confidence: json.confidence,
+        verificationStatus: json.verificationStatus,
+        alternativeCandidates: json.alternatives,
+        needsHumanReview: json.needsReview
+      };
+      return finalizeResult(mapped, hash, 'api');
     });
   }
   // Every image is identified with its OWN independent AI request — never batched
   // into one call — so a mismatch in one photo can never bleed into another's name.
-  function identifyOne(file, hash, existingName){
+  function identifyOne(file, hash, existingName, productId){
     var hasClaudeRuntime = typeof claude !== 'undefined' && claude && claude.use;
     if (!hasClaudeRuntime){
-      return identifyViaApi(file, hash, existingName).catch(function(){ return unavailableResult(hash, 'error'); });
+      return identifyViaApi(file, hash, existingName, productId).catch(function(err){
+        if (err && err.code === 'server_not_configured'){
+          return unavailableResult(hash, 'not_configured', 'Falta configurar ANTHROPIC_API_KEY en el servidor.');
+        }
+        return unavailableResult(hash, 'error', (err && err.message) || 'No se pudo completar la identificación.');
+      });
     }
     return claude.use('sample').then(function(sample){
-      if (!sample) return unavailableResult(hash, 'unavailable');
+      if (!sample) return unavailableResult(hash, 'unavailable', 'Esta vista no puede usar la IA de Claude (enlace público, o sin ese permiso).');
       return sample.limits().then(function(limits){
-        if (!limits || !limits.images) return unavailableResult(hash, 'unavailable');
+        if (!limits || !limits.images) return unavailableResult(hash, 'unavailable', 'Esta vista no admite enviar imágenes a Claude.');
         return identifyChunkStructured(sample, [file]).then(function(arr){
           return finalizeResult(arr[0], hash, 'sample');
-        }).catch(function(){ return unavailableResult(hash, 'error'); });
+        }).catch(function(err){
+          if (err && err.code === 'not_granted'){
+            return unavailableResult(hash, 'not_granted', 'Se rechazó el permiso para que esta página use Claude. Recarga la página para que se vuelva a pedir.');
+          }
+          return unavailableResult(hash, 'error', (err && err.message) || 'La IA no devolvió un resultado válido.');
+        });
+      }, function(err){
+        return unavailableResult(hash, 'error', (err && err.message) || 'No se pudieron consultar los límites de la IA.');
       });
-    }).catch(function(){ return unavailableResult(hash, 'unavailable'); });
+    }).catch(function(err){
+      return unavailableResult(hash, 'unavailable', (err && err.message) || 'Claude no está disponible en esta vista.');
+    });
   }
   /**
-   * entries: [{file: File, existingName: string|null}]
+   * entries: [{file: File, existingName: string|null, id: string}] — `id` is the
+   * product's own stable _id (see ensureProductId), never an array position.
    * onProgress(done, total) fires as each image finishes (cache hits count instantly).
-   * onItem(index, result) fires the moment that single entry's result is ready, so the
-   * caller can update that product's card immediately instead of waiting for the batch.
+   * onItem(index, result, id) fires the moment that single entry's result is ready —
+   * always paired with its product's stable id, so the caller can look the product
+   * up by identity (findProductById) instead of trusting array position, which may
+   * have shifted under undo/redo/move/delete while this batch was still in flight.
    * Concurrency is capped at 3 simultaneous requests to avoid rate-limit failures.
    * Resolves to an array of identification results, same order/length as entries.
    */
@@ -1434,11 +1500,11 @@
         var cached = bypassCache ? null : findCachedByHash(hashes[i]);
         if (cached){
           var cachedRes = withSource(cached, 'cache');
-          results[i] = cachedRes; bump(); if (onItem) onItem(i, cachedRes);
+          results[i] = cachedRes; bump(); if (onItem) onItem(i, cachedRes, entry.id);
           return Promise.resolve(cachedRes);
         }
-        return identifyOne(entry.file, hashes[i], entry.existingName).then(function(res){
-          results[i] = res; bump(); if (onItem) onItem(i, res); return res;
+        return identifyOne(entry.file, hashes[i], entry.existingName, entry.id).then(function(res){
+          results[i] = res; bump(); if (onItem) onItem(i, res, entry.id); return res;
         });
       }).then(function(){ return results; });
     });
@@ -1472,7 +1538,11 @@
     '.id-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}' +
     '.id-actions button{font-size:11.5px;font-weight:800;border-radius:8px;padding:6px 10px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--text);}' +
     '.id-actions button:hover{border-color:var(--lime-deep);}' +
-    '.id-meta{color:var(--muted);}';
+    '.id-meta{color:var(--muted);}' +
+    '.price-sale.price-tbd{background:var(--line);color:var(--muted);font-size:13px;letter-spacing:0;}' +
+    '.badge.tbd{background:var(--line);color:var(--muted);}' +
+    '.id-actions button:disabled{opacity:.5;cursor:default;}' +
+    '.id-error{color:var(--danger);margin-top:4px;}';
   document.head.appendChild(editProStyle);
 
   // ---------------- inject extra modals (bulk upload / site texts / colors) ----------------
@@ -1548,10 +1618,17 @@
     if (el) el.textContent = '';
   };
   var statusCssClass = function(label){
-    if (label === 'Identificado') return 'ok';
+    if (label === 'Producto identificado') return 'ok';
     if (label === 'Revisar nombre') return 'warn';
     return 'bad';
   };
+  var pendingNewId = null;
+  var currentEditingProductId = function(){
+    if (editingIndex !== null && DATA[editingIndex]) return ensureProductId(DATA[editingIndex]);
+    if (!pendingNewId) pendingNewId = newProductId();
+    return pendingNewId;
+  };
+  var reidentifyBusy = false;
   var renderIdPanel = function(){
     var panel = document.getElementById('id-panel');
     if (!panel) return;
@@ -1565,13 +1642,14 @@
     panel.hidden = false;
     panel.innerHTML =
       '<div class="id-row"><strong>Nombre sugerido por IA</strong><span class="id-status ' + cls + '">' + escapeHtml(r.statusLabel) + (r.name ? ' · ' + pct + '%' : '') + '</span></div>' +
-      (r.name ? '<div>' + escapeHtml(r.name) + '</div>' : '<div class="id-meta">Sin sugerencia disponible.</div>') +
+      (r.name ? '<div>' + escapeHtml(r.name) + '</div>' : '') +
+      (!r.name && r.errorMessage ? '<div class="id-error">' + escapeHtml(r.errorMessage) + '</div>' : '') +
       (r.brand || r.colorway ? '<div class="id-meta">' + escapeHtml([r.brand, r.modelFamily, r.colorway].filter(Boolean).join(' · ')) + '</div>' : '') +
       (r.visibleProductCode ? '<div class="id-meta">Código visible: ' + escapeHtml(r.visibleProductCode) + '</div>' : '') +
       (altsHtml ? '<div class="id-meta" style="margin-top:6px;">Alternativas:</div><div class="id-alts">' + altsHtml + '</div>' : '') +
       '<div class="id-actions">' +
         (r.name ? '<button type="button" id="id-use-main">Usar este nombre</button>' : '') +
-        '<button type="button" id="id-reidentify">Volver a identificar</button>' +
+        '<button type="button" id="id-reidentify"' + (reidentifyBusy ? ' disabled' : '') + '>' + (reidentifyBusy ? 'Analizando imagen…' : 'Volver a identificar') + '</button>' +
       '</div>';
     var useMain = document.getElementById('id-use-main');
     if (useMain) useMain.addEventListener('click', function(){ fNameInput.value = r.name; });
@@ -1581,35 +1659,46 @@
     var reidBtn = document.getElementById('id-reidentify');
     var reidArmed = false;
     reidBtn.addEventListener('click', function(){
+      if (reidentifyBusy) return; // one in-flight request at a time, no double-fires
       var currentImg = fImgInput.value.trim();
       if (!currentImg){ document.getElementById('f-img-status').textContent = 'Primero sube o indica una imagen.'; return; }
+      if (currentImg.indexOf('blob:') === 0){
+        document.getElementById('f-img-status').textContent = 'Esta imagen todavía se está subiendo. Espera un momento y vuelve a intentar.';
+        return;
+      }
       var nameEdited = fNameInput.value.trim() && r.name && fNameInput.value.trim() !== r.name;
       if (nameEdited && !reidArmed){
         reidArmed = true;
         reidBtn.textContent = '¿Reemplazar el nombre? Toca de nuevo';
-        setTimeout(function(){ reidArmed = false; reidBtn.textContent = 'Volver a identificar'; }, 5500);
+        setTimeout(function(){ reidArmed = false; if (!reidentifyBusy) reidBtn.textContent = 'Volver a identificar'; }, 5500);
         return;
       }
+      reidentifyBusy = true;
+      renderIdPanel();
       fetch(currentImg).then(function(res){ return res.blob(); }).then(function(blob){
         var file = new File([blob], 'reidentify.jpg', { type: blob.type || 'image/jpeg' });
         document.getElementById('f-img-status').textContent = 'Analizando imagen…';
-        runIdentification(file, null, null, true);
+        runIdentification(file, null, function(){ reidentifyBusy = false; }, true);
       }).catch(function(){
+        reidentifyBusy = false;
         document.getElementById('f-img-status').textContent = 'No se pudo volver a leer esta imagen.';
+        renderIdPanel();
       });
     });
   };
   var runIdentification = function(file, existingName, onDone, bypassCache){
     var status = document.getElementById('f-img-status');
     status.textContent = 'Analizando imagen…';
-    identifyBatch([{ file: file, existingName: existingName || null }], function(){
+    identifyBatch([{ file: file, existingName: existingName || null, id: currentEditingProductId() }], function(){
       status.textContent = 'Verificando nombre…';
     }, null, bypassCache).then(function(results){
       var result = results[0];
       lastIdentification = result;
+      reidentifyBusy = false;
       renderIdPanel();
       if (result.name && !fNameInput.value.trim()){ fNameInput.value = result.name; }
-      status.textContent = result.identificationSource === 'cache' ? 'Modelo recuperado de caché ✔' : (result.name ? 'Análisis listo ✔' : result.statusLabel);
+      status.textContent = result.identificationSource === 'cache' ? 'Modelo recuperado de caché ✔' :
+        (result.name ? 'Producto identificado ✔' : (result.errorMessage || result.statusLabel));
       if (onDone) onDone(result);
     });
   };
@@ -1738,7 +1827,7 @@
       textProducts.push({
         name: parts[0],
         original: (original && !isNaN(original)) ? original : null,
-        sale: parts[2] || "0",
+        sale: parts[2] || null,
         sizes: parts[3] ? parts[3].split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [],
         img: parts[4] || "images/logo.jpg"
       });
@@ -1755,10 +1844,12 @@
     }
 
     pushHistory();
-    var startIndex = DATA.length + textProducts.length;
     var placeholders = files.map(function(file){
       var previewUrl = URL.createObjectURL(file);
-      return { name: '', original: null, sale: "0", sizes: [], img: previewUrl, _pending: 'Analizando imagen…', _previewUrl: previewUrl };
+      return {
+        _id: newProductId(), name: '', original: null, sale: null, sizes: [], img: previewUrl,
+        _pending: 'Analizando imagen…', _previewUrl: previewUrl
+      };
     });
     DATA.push.apply(DATA, textProducts);
     DATA.push.apply(DATA, placeholders);
@@ -1769,28 +1860,31 @@
     status.textContent = progressMsg;
     updateEditStatus(progressMsg);
 
-    var entries = files.map(function(f){ return { file: f, existingName: null }; });
+    var entries = files.map(function(f, k){ return { file: f, existingName: null, id: placeholders[k]._id }; });
     identifyBatch(entries, function(done, total){
       var msg = 'Identificando ' + done + ' de ' + total + ' productos…' + truncatedNote;
       status.textContent = msg;
       updateEditStatus(msg);
-    }, function(i, result){
-      var product = placeholders[i];
-      var dataIndex = startIndex + i;
+    }, function(i, result, id){
+      // Looked up by stable _id, never by array position — the product may have
+      // moved, been duplicated around, or deleted elsewhere while this was in flight.
+      var product = findProductById(id);
+      if (!product) return; // deleted mid-flight; nothing to update
       if (result.name) product.name = result.name;
       product.identification = result;
       product._pending = 'Subiendo imagen…';
-      if (DATA[dataIndex] === product) renderGrid();
-      uploadImageFile(files[i]).then(function(url){
+      renderGrid();
+      var sourceFile = files[i];
+      uploadImageFile(sourceFile).then(function(url){
         if (product._previewUrl){ URL.revokeObjectURL(product._previewUrl); delete product._previewUrl; }
         product.img = url;
         delete product._pending;
-        if (DATA[dataIndex] === product) renderGrid();
+        renderGrid();
       }).catch(function(){
         // Keep it out of cleanState() (never save a dead blob: URL) and make the
         // failure visible in the grid instead of silently dropping the product.
         product._pending = 'Error al subir imagen — ábrelo para reintentar';
-        if (DATA[dataIndex] === product) renderGrid();
+        renderGrid();
       });
     }).then(function(results){
       var unknownCount = results.filter(function(r){ return !r.name; }).length;
@@ -1811,29 +1905,26 @@
       p.identification.verificationStatus === 'error' || p.identification.verificationStatus === 'unavailable'));
   }
   document.getElementById('reidentify-pending-btn').addEventListener('click', function(){
-    var targets = [];
-    for (var i = 0; i < DATA.length; i++){ if (needsIdentification(DATA[i])) targets.push(i); }
+    DATA.forEach(ensureProductId);
+    var targets = DATA.filter(needsIdentification);
     if (!targets.length){ updateEditStatus('No hay productos pendientes de identificar.'); return; }
     updateEditStatus('Recuperando ' + targets.length + ' imagen(es)…');
-    Promise.all(targets.map(function(i){
-      return fetch(DATA[i].img).then(function(res){ return res.blob(); }).then(function(blob){
-        return new File([blob], 'reidentify-' + i + '.jpg', { type: blob.type || 'image/jpeg' });
+    Promise.all(targets.map(function(p){
+      return fetch(p.img).then(function(res){ return res.blob(); }).then(function(blob){
+        return new File([blob], 'reidentify.jpg', { type: blob.type || 'image/jpeg' });
       }).catch(function(){ return null; });
     })).then(function(files){
       var entries = [];
-      var entryIndexToDataIndex = [];
       files.forEach(function(file, k){
         if (!file) return;
-        entries.push({ file: file, existingName: DATA[targets[k]].name || null });
-        entryIndexToDataIndex.push(targets[k]);
+        entries.push({ file: file, existingName: targets[k].name || null, id: targets[k]._id });
       });
       if (!entries.length){ updateEditStatus('No se pudieron leer esas imágenes.'); return; }
       pushHistory();
       identifyBatch(entries, function(done, total){
         updateEditStatus('Identificando ' + done + ' de ' + total + ' pendientes…');
-      }, function(k, result){
-        var dataIndex = entryIndexToDataIndex[k];
-        var product = DATA[dataIndex];
+      }, function(i, result, id){
+        var product = findProductById(id);
         if (!product) return;
         if (result.name) product.name = result.name;
         product.identification = result;

@@ -6,41 +6,46 @@
 // through the `sample` capability (see index.html) — the viewer's own Claude
 // account answers directly, with no API key anywhere near the browser.
 //
-// Required environment variables (set in the Vercel project settings, never
-// committed to the repo):
+// Required environment variables (set in the Vercel project settings — see
+// .env.example — never committed to the repo):
 //   ANTHROPIC_API_KEY  - secret key from console.anthropic.com
 //   ANTHROPIC_MODEL    - optional, defaults to a current vision-capable model
 //
-// POST body (application/json):
-//   { productId, sourceFilename, imageBase64, mediaType, existingName }
+// Request: multipart/form-data (NOT JSON, NOT a blob: URL) —
+//   image          - the ORIGINAL File the browser read from disk
+//   productId      - the product's own stable id, echoed back unchanged
+//   existingName   - optional, a provisional name already on the product
+//
 // Response (application/json), always this shape on success:
-//   { name, brand, modelFamily, colorway, visibleProductCode,
-//     confidence, verificationStatus, alternativeCandidates, needsHumanReview }
+//   { productId, exactName, brand, model, colorway, confidence,
+//     alternatives, needsReview,
+//     -- extra fields the frontend also understands --
+//     visibleProductCode, verificationStatus }
 
+const Busboy = require('busboy');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const DEFAULT_MODEL = 'claude-sonnet-5';
 const ALLOWED_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_BASE64_BYTES = 20 * 1024 * 1024; // ~20MB decoded, matches Anthropic's own image cap
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024; // matches Anthropic's own per-image cap
 const REQUEST_TIMEOUT_MS = 25000; // per attempt — 3 attempts worst case stays well under typical serverless limits
 
 function buildPrompt(existingName) {
   return (
-    'Eres un experto en identificar modelos de zapatillas (sneakers) por su apariencia visual. ' +
-    'Analiza la foto considerando: marcas visibles, silueta, estructura de la suela, paneles y materiales, ' +
-    'construcción de lengüeta y talón, texto visible, etiquetas de caja, códigos de producto (SKU) y ' +
-    'combinación de colores / colorways oficiales conocidos. ' +
-    (existingName ? ('El catálogo ya tiene un nombre provisional para este producto: "' + existingName + '". Verifícalo o corrígelo si la foto muestra algo distinto. ') : '') +
+    'Analiza esta imagen de una zapatilla (sneaker) e identifica el producto comercial real ' +
+    'con la mayor precisión que la evidencia visible permita: silueta visible, paneles, suela, ' +
+    'logos, materiales, combinación de colores, etiquetas y códigos de producto. ' +
+    (existingName ? ('El catálogo ya tiene un nombre provisional: "' + existingName + '". Verifícalo o corrígelo si la foto muestra algo distinto. ') : '') +
     'Responde SOLO con un objeto JSON con EXACTAMENTE estas claves: ' +
-    'name (string, formato "Marca + Modelo + Edición/Silueta + Colorway", ej: "Nike Air Jordan 4 Retro Military Black" — ' +
-    'solo un ejemplo de formato, nunca lo asignes salvo que la foto lo respalde), ' +
-    'brand (string o null), modelFamily (string o null), colorway (string o null), ' +
+    'brand (string o null), model (string o null), colorway (string o null), ' +
+    'exactName (string — el nombre comercial real más probable, ej: "Nike Air Jordan 4 Retro Military Black"), ' +
+    'confidence (número de 0 a 1), alternatives (array de hasta 3 strings), needsReview (boolean), ' +
     'visibleProductCode (string o null, solo si se lee un código/SKU en la foto), ' +
-    'confidence (número entre 0 y 1, prudente — nunca 1.0 solo por parecido visual), ' +
-    'verificationStatus ("verified" si un código de producto legible confirma el modelo, "probable" si la seña visual es fuerte pero sin código legible, "uncertain" si hay dudas relevantes), ' +
-    'alternativeCandidates (array de hasta 3 strings con otros nombres posibles, o array vacío), ' +
-    'needsHumanReview (boolean, true si confidence < 0.85). ' +
-    'Da siempre tu mejor nombre posible en "name" aunque la confianza sea baja — NUNCA dejes "name" vacío ni uses un texto genérico tipo "Modelo por confirmar"; la incertidumbre se expresa con confidence/verificationStatus, no con el nombre. ' +
+    'verificationStatus ("verified" si un código de producto legible confirma el modelo, "probable" si la seña visual es fuerte pero sin código legible, "uncertain" si hay dudas relevantes). ' +
+    'No inventes un SKU, colaboración, edición o colorway que la imagen no respalde. ' +
+    'exactName debe usar el nombre comercial real más probable. ' +
+    'NUNCA devuelvas "Modelo por confirmar", "Desconocido", "Sneaker" u otro texto genérico como exactName. ' +
+    'Si la certeza es limitada, da el nombre mejor respaldado, pon needsReview en true e incluye alternatives. ' +
     'No agregues texto fuera del objeto JSON.'
   );
 }
@@ -51,29 +56,33 @@ function clampConfidence(value) {
   return Math.max(0, Math.min(1, n));
 }
 
+const GENERIC_NAMES = ['modelo por confirmar', 'desconocido', 'sneaker', 'unknown', 'n/a', ''];
+
 // Validates and coerces the model's reply into the exact response contract.
 // Never trusts the model's JSON blindly — every field is checked and clamped.
 function validateIdentification(raw) {
   if (!raw || typeof raw !== 'object') {
-    throw new Error('invalid_model_output');
+    throw Object.assign(new Error('invalid_model_output'), { retryable: false });
   }
   const verificationStatus = ['verified', 'probable', 'uncertain'].includes(raw.verificationStatus)
     ? raw.verificationStatus
     : 'uncertain';
-  const alternativeCandidates = Array.isArray(raw.alternativeCandidates)
-    ? raw.alternativeCandidates.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 3)
+  const alternatives = Array.isArray(raw.alternatives)
+    ? raw.alternatives.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 3)
     : [];
   const confidence = clampConfidence(raw.confidence);
+  let exactName = String(raw.exactName || '').trim();
+  if (GENERIC_NAMES.includes(exactName.toLowerCase())) exactName = ''; // never forward a placeholder as if it were real
   return {
-    name: String(raw.name || '').trim(),
+    exactName,
     brand: raw.brand ? String(raw.brand).trim() : null,
-    modelFamily: raw.modelFamily ? String(raw.modelFamily).trim() : null,
+    model: raw.model ? String(raw.model).trim() : null,
     colorway: raw.colorway ? String(raw.colorway).trim() : null,
     visibleProductCode: raw.visibleProductCode ? String(raw.visibleProductCode).trim() : null,
     confidence,
     verificationStatus,
-    alternativeCandidates,
-    needsHumanReview: Boolean(raw.needsHumanReview) || confidence < 0.85,
+    alternatives,
+    needsReview: Boolean(raw.needsReview) || confidence < 0.85 || !exactName,
   };
 }
 
@@ -100,15 +109,38 @@ function tryParse(s) {
   try { return JSON.parse(s); } catch (e) { return null; }
 }
 
-async function readJsonBody(req) {
-  if (req.body && typeof req.body === 'object') return req.body; // Vercel Node runtime auto-parses JSON
+// Parses the multipart/form-data body: the ORIGINAL file bytes plus the plain
+// text fields. Rejects anything over MAX_IMAGE_BYTES while streaming, rather
+// than buffering an unbounded upload first.
+function parseMultipart(req) {
   return new Promise((resolve, reject) => {
-    let raw = '';
-    req.on('data', (chunk) => { raw += chunk; });
-    req.on('end', () => {
-      try { resolve(raw ? JSON.parse(raw) : {}); } catch (e) { reject(e); }
+    let busboy;
+    try {
+      busboy = Busboy({ headers: req.headers, limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
+    } catch (e) {
+      reject(Object.assign(new Error('invalid_request'), { code: 'invalid_request' }));
+      return;
+    }
+    const fields = {};
+    let file = null;
+    let fileTooLarge = false;
+
+    busboy.on('field', (name, value) => { fields[name] = value; });
+    busboy.on('file', (name, stream, info) => {
+      if (name !== 'image') { stream.resume(); return; }
+      const chunks = [];
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('limit', () => { fileTooLarge = true; });
+      stream.on('end', () => {
+        file = { buffer: Buffer.concat(chunks), mimeType: info.mimeType, filename: info.filename };
+      });
     });
-    req.on('error', reject);
+    busboy.on('error', (err) => reject(err));
+    busboy.on('finish', () => {
+      if (fileTooLarge) { reject(Object.assign(new Error('image_too_large'), { code: 'image_too_large' })); return; }
+      resolve({ fields, file });
+    });
+    req.pipe(busboy);
   });
 }
 
@@ -120,36 +152,37 @@ module.exports = async function handler(req, res) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    // Never expose the missing-key detail beyond "not configured" — and
-    // never, ever, embed a fallback key in code.
-    res.status(500).json({ error: 'server_not_configured', message: 'ANTHROPIC_API_KEY no está configurada en el servidor.' });
+    // Never expose more than "not configured" — and never, ever, embed a fallback key.
+    res.status(500).json({ error: 'server_not_configured', message: 'Falta configurar ANTHROPIC_API_KEY en el servidor.' });
     return;
   }
 
-  let body;
+  let parsed;
   try {
-    body = await readJsonBody(req);
+    parsed = await parseMultipart(req);
   } catch (e) {
-    res.status(400).json({ error: 'invalid_request', message: 'Cuerpo de la petición inválido.' });
+    if (e && e.code === 'image_too_large') {
+      res.status(400).json({ error: 'image_too_large', message: 'La imagen es demasiado grande (máx. 20MB).' });
+    } else {
+      res.status(400).json({ error: 'invalid_request', message: 'No se pudo leer la imagen enviada.' });
+    }
     return;
   }
 
-  const { productId, sourceFilename, imageBase64, mediaType, existingName } = body || {};
+  const { fields, file } = parsed;
+  const productId = fields.productId || null;
+  const existingName = fields.existingName || null;
 
-  if (!imageBase64 || typeof imageBase64 !== 'string') {
-    res.status(400).json({ error: 'invalid_image', message: 'Falta la imagen o el archivo está dañado.' });
+  if (!file || !file.buffer || !file.buffer.length) {
+    res.status(400).json({ error: 'invalid_image', message: 'Falta la imagen o el archivo está dañado.', productId });
     return;
   }
-  if (!ALLOWED_MEDIA_TYPES.includes(mediaType)) {
-    res.status(400).json({ error: 'unsupported_format', message: 'Formato no soportado. Usa JPG, PNG, WebP o GIF.' });
-    return;
-  }
-  const approxBytes = Math.ceil((imageBase64.length * 3) / 4);
-  if (approxBytes > MAX_BASE64_BYTES) {
-    res.status(400).json({ error: 'image_too_large', message: 'La imagen es demasiado grande (máx. 20MB).' });
+  if (!ALLOWED_MEDIA_TYPES.includes(file.mimeType)) {
+    res.status(400).json({ error: 'unsupported_format', message: 'Formato no soportado. Usa JPG, PNG, WebP o GIF.', productId });
     return;
   }
 
+  const imageBase64 = file.buffer.toString('base64');
   const client = new Anthropic({ apiKey });
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
 
@@ -170,7 +203,7 @@ module.exports = async function handler(req, res) {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
+            { type: 'image', source: { type: 'base64', media_type: file.mimeType, data: imageBase64 } },
             { type: 'text', text: buildPrompt(existingName) },
           ],
         }],
@@ -181,11 +214,11 @@ module.exports = async function handler(req, res) {
       const rawText = textBlock ? textBlock.text : '';
       if (!rawText.trim()) throw Object.assign(new Error('empty_completion'), { retryable: false });
 
-      const parsed = extractJsonObject(rawText);
-      if (!parsed) throw Object.assign(new Error('invalid_json'), { retryable: false });
+      const parsedJson = extractJsonObject(rawText);
+      if (!parsedJson) throw Object.assign(new Error('invalid_json'), { retryable: false });
 
-      const identification = validateIdentification(parsed);
-      res.status(200).json(Object.assign({ productId: productId || null, sourceFilename: sourceFilename || null }, identification));
+      const identification = validateIdentification(parsedJson);
+      res.status(200).json(Object.assign({ productId }, identification));
       return;
     } catch (err) {
       clearTimeout(timeout);
@@ -203,14 +236,14 @@ module.exports = async function handler(req, res) {
 
   const status = lastError && lastError.status;
   if (status === 401 || status === 403) {
-    res.status(500).json({ error: 'unauthorized', message: 'La API key de Anthropic fue rechazada. Revisa ANTHROPIC_API_KEY en Vercel.' });
+    res.status(500).json({ error: 'unauthorized', message: 'La API key de Anthropic fue rechazada. Revisa ANTHROPIC_API_KEY en Vercel.', productId });
   } else if (status === 429) {
-    res.status(429).json({ error: 'rate_limited', message: 'Límite de solicitudes alcanzado. Intenta de nuevo en unos segundos.' });
+    res.status(429).json({ error: 'rate_limited', message: 'Límite de solicitudes alcanzado. Intenta de nuevo en unos segundos.', productId });
   } else if (lastAborted) {
-    res.status(504).json({ error: 'timeout', message: 'La identificación tardó demasiado. Intenta de nuevo.' });
+    res.status(504).json({ error: 'timeout', message: 'La identificación tardó demasiado. Intenta de nuevo.', productId });
   } else if (lastError && (lastError.message === 'invalid_json' || lastError.message === 'empty_completion')) {
-    res.status(502).json({ error: 'invalid_model_output', message: 'La IA no devolvió una respuesta utilizable.' });
+    res.status(502).json({ error: 'invalid_model_output', message: 'La IA no devolvió una respuesta utilizable.', productId });
   } else {
-    res.status(502).json({ error: 'upstream_error', message: 'No se pudo completar la identificación. Intenta de nuevo.' });
+    res.status(502).json({ error: 'upstream_error', message: 'No se pudo completar la identificación. Intenta de nuevo.', productId });
   }
 };

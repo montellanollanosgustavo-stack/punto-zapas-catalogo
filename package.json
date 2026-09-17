@@ -1,0 +1,9 @@
+{
+  "name": "punto-zapas-catalogo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Catálogo estático de Punto Zapas, con una función serverless para identificar modelos de zapatillas por foto.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.126.0"
+  }
+}

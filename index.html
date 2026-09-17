@@ -638,12 +638,17 @@
     return sale;
   }
 
+  function displayName(p){
+    if (p._pending) return p._pending;
+    return (p.name && p.name.trim()) || 'Producto sin nombre';
+  }
+
   function waLink(p){
     var priceLine = p.original
       ? "Precio oferta: Bs " + p.sale + " (antes Bs " + p.original + ")"
       : "Promo: " + formatSale(p.sale);
     var msg = "Hola Punto Zapas 👋 Quiero este par:\n\n" +
-      p.name + "\n" + priceLine + "\n\nTe envío la captura de pantalla para confirmar disponibilidad y talla 📸";
+      displayName(p) + "\n" + priceLine + "\n\nTe envío la captura de pantalla para confirmar disponibilidad y talla 📸";
     return "https://wa.me/" + META.whatsapp + "?text=" + encodeURIComponent(msg);
   }
 
@@ -670,8 +675,11 @@
       : '<span class="badge promo">Promo</span>';
     var sizes = p.sizes.map(function(s){ return '<span>' + escapeHtml(s) + '</span>'; }).join('');
     var total = arr.length;
+    var needsReview = !p._pending && (!p.name || (p.identification && (p.identification.needsHumanReview || p.identification.verificationStatus === 'error' || p.identification.verificationStatus === 'unavailable')));
+    var reviewDot = needsReview ? '<span class="review-dot" title="Revisar nombre / identificación"></span>' : '';
     var tools =
       '<div class="card-tools">' +
+        reviewDot +
         '<button type="button" class="ct-btn" data-move="' + i + ':-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="Mover antes">◀</button>' +
         '<button type="button" class="ct-btn" data-edit="' + i + '" aria-label="Editar producto">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
@@ -680,14 +688,14 @@
         '<button type="button" class="ct-btn" data-move="' + i + ':1"' + (i === total - 1 ? ' disabled' : '') + ' aria-label="Mover después">▶</button>' +
       '</div>';
     return (
-      '<article class="card" data-index="' + i + '" data-brand="' + brandOf(p.name) + '" data-name="' + escapeHtml(p.name.toLowerCase()) + '">' +
+      '<article class="card" data-index="' + i + '" data-brand="' + brandOf(p.name) + '" data-name="' + escapeHtml((p.name || '').toLowerCase()) + '">' +
         '<div class="card-media">' +
-          '<img src="' + escapeHtml(p.img) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">' +
+          '<img src="' + escapeHtml(p.img) + '" alt="' + escapeHtml(displayName(p)) + '" loading="lazy">' +
           badge +
           tools +
         '</div>' +
         '<div class="card-body">' +
-          '<h3 class="card-name">' + escapeHtml(p.name) + '</h3>' +
+          '<h3 class="card-name">' + escapeHtml(displayName(p)) + '</h3>' +
           '<div class="price-row">' + priceBlock + '</div>' +
           '<div>' +
             '<div class="sizes-label">Tallas disponibles</div>' +
@@ -815,6 +823,7 @@
 
   // ---------------- product modal ----------------
   var productModal = document.getElementById('product-modal');
+  var lastIdentification = null;
   function openProductModal(index){
     editingIndex = index;
     var p = index === null ? { name:"", original:780, sale:"600", sizes:[], img:"" } : DATA[index];
@@ -826,6 +835,9 @@
     document.getElementById('f-img').value = p.img || "";
     document.getElementById('delete-product-btn').hidden = index === null;
     resetDeleteArm();
+    lastIdentification = p.identification || null;
+    if (typeof renderIdPanel === 'function') renderIdPanel();
+    if (typeof clearImgStatus === 'function') clearImgStatus();
     productModal.hidden = false;
   }
   function closeProductModal(){ productModal.hidden = true; editingIndex = null; resetDeleteArm(); }
@@ -833,7 +845,8 @@
   productModal.addEventListener('click', function(e){ if (e.target === productModal) closeProductModal(); });
 
   document.getElementById('save-product-btn').addEventListener('click', function(){
-    var name = document.getElementById('f-name').value.trim() || UNKNOWN_MODEL_NAME;
+    var name = document.getElementById('f-name').value.trim();
+    if (!name){ document.getElementById('f-name').focus(); return; }
     var originalRaw = document.getElementById('f-original').value.trim();
     var sale = document.getElementById('f-sale').value.trim() || "0";
     var sizes = document.getElementById('f-sizes').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
@@ -843,7 +856,9 @@
       original: originalRaw ? Number(originalRaw) : null,
       sale: sale,
       sizes: sizes,
-      img: img
+      img: img,
+      identification: lastIdentification || undefined,
+      manuallyEditedName: !lastIdentification || name !== lastIdentification.name
     };
     pushHistory();
     if (editingIndex === null){ DATA.push(product); }
@@ -1008,8 +1023,11 @@
         texts: META.texts,
         theme: META.theme
       },
-      products: DATA.map(function(p){
-        return { name:p.name, original:p.original, sale:p.sale, sizes:p.sizes, img:p.img };
+      products: DATA.filter(function(p){ return !p._pending; }).map(function(p){
+        return {
+          name: p.name, original: p.original, sale: p.sale, sizes: p.sizes, img: p.img,
+          identification: p.identification, manuallyEditedName: p.manuallyEditedName
+        };
       })
     };
   }
@@ -1218,57 +1236,207 @@
     return dataUrlFallback(file);
   }
 
-  // ---------------- AI model identification (sample capability, looks at the photo) ----------------
-  var UNKNOWN_MODEL_NAME = 'Modelo por confirmar';
-  var IDENTIFY_PROMPT_ONE =
-    'Eres experto en identificar modelos de zapatillas (sneakers) por su apariencia. ' +
-    'Mira la foto y responde SOLO con el nombre oficial de marca + modelo + color, en este estilo exacto: ' +
-    '"Air Jordan 4 Retro Blanco/Verde", "Golden Goose Super-Star Blanco/Gris", "Asics Gel-Kayano 14 Negro/Blanco". ' +
-    'Si no puedes identificar la marca o el modelo con certeza, responde exactamente: ' + UNKNOWN_MODEL_NAME + '. ' +
-    'No agregues explicaciones, comillas ni texto adicional, solo el nombre.';
-  function identifyChunkPrompt(n){
-    return 'Eres experto en identificar modelos de zapatillas (sneakers) por su apariencia. ' +
-      'Te muestro ' + n + ' fotos en orden. Responde SOLO con un array JSON de exactamente ' + n +
-      ' strings, uno por foto en el mismo orden, con el nombre oficial de marca + modelo + color, en este estilo: ' +
-      '"Air Jordan 4 Retro Blanco/Verde", "Golden Goose Super-Star Blanco/Gris", "Asics Gel-Kayano 14 Negro/Blanco". ' +
-      'Si no identificas alguna con certeza, usa exactamente "' + UNKNOWN_MODEL_NAME + '" en esa posición. ' +
-      'No agregues nada más, solo el array JSON.';
+  // ---------------- AI sneaker identification ----------------
+  // Two transports, same output schema:
+  //  - inside the Claude artifact: claude.use('sample') looks at the photo directly
+  //    (the viewer's own Claude account answers; no API key ever exists in this page).
+  //  - outside the artifact (this file hosted elsewhere, e.g. a static export):
+  //    POST /api/identify-sneaker, a server-side endpoint that holds the real API key.
+  // Never falls back to a generic placeholder name: on genuine failure the name stays
+  // blank and the status explains why, so the owner is never silently lied to.
+  function buildIdentifyPrompt(n){
+    return 'Eres un experto en identificar modelos de zapatillas (sneakers) por su apariencia visual. ' +
+      'Analiza cada una de las ' + n + ' fotos, en el mismo orden, considerando: marcas visibles, silueta, ' +
+      'estructura de la suela, paneles y materiales, construcción de lengüeta y talón, texto visible, ' +
+      'etiquetas de caja, códigos de producto (SKU) y combinación de colores / colorways oficiales conocidos. ' +
+      'Responde SOLO con un array JSON de exactamente ' + n + ' objetos (uno por foto, mismo orden), cada uno con ' +
+      'EXACTAMENTE estas claves: name (string, formato "Marca + Modelo + Edición/Silueta + Colorway", ej: ' +
+      '"Nike Air Jordan 4 Retro Military Black", "Nike Air Force 1 Low Triple White", "Adidas Campus 00s Core Black" ' +
+      '— estos son solo ejemplos de formato, nunca los asignes salvo que la foto los respalde), ' +
+      'brand (string o null), modelFamily (string o null), colorway (string o null), ' +
+      'visibleProductCode (string o null, solo si se lee un código/SKU en la foto), ' +
+      'confidence (número entre 0 y 1, prudente — nunca 1.0 solo por parecido visual), ' +
+      'verificationStatus ("verified" si un código de producto legible confirma el modelo, "probable" si la seña visual es fuerte pero sin código legible, "uncertain" si hay dudas relevantes), ' +
+      'alternativeCandidates (array de hasta 3 strings con otros nombres posibles, o array vacío), ' +
+      'needsHumanReview (boolean, true si confidence < 0.85). ' +
+      'Da siempre tu mejor nombre posible en "name" aunque la confianza sea baja — NUNCA dejes "name" vacío ni uses un texto genérico tipo "Modelo por confirmar"; la incertidumbre se expresa con confidence/verificationStatus, no con el nombre. ' +
+      'No agregues texto fuera del array JSON.';
   }
-  function identifyChunk(sample, chunk){
-    if (chunk.length === 1){
-      return sample(IDENTIFY_PROMPT_ONE, { images: chunk, modelTier: 'quick', cache: false }).then(function(res){
-        var name = String((res && res.text) || '').trim().replace(/^["']|["']$/g, '');
-        return [name || null];
-      }).catch(function(){ return [null]; });
+  function sanitizeIdentification(o){
+    o = o || {};
+    var confidence = Number(o.confidence);
+    if (!isFinite(confidence)) confidence = 0;
+    confidence = Math.max(0, Math.min(1, confidence));
+    var verificationStatus = ['verified', 'probable', 'uncertain'].indexOf(o.verificationStatus) !== -1 ? o.verificationStatus : 'uncertain';
+    var alternatives = Array.isArray(o.alternativeCandidates)
+      ? o.alternativeCandidates.map(function(s){ return String(s || '').trim(); }).filter(Boolean).slice(0, 3)
+      : [];
+    return {
+      name: String(o.name || '').trim(),
+      brand: o.brand ? String(o.brand).trim() : null,
+      modelFamily: o.modelFamily ? String(o.modelFamily).trim() : null,
+      colorway: o.colorway ? String(o.colorway).trim() : null,
+      visibleProductCode: o.visibleProductCode ? String(o.visibleProductCode).trim() : null,
+      confidence: confidence,
+      verificationStatus: verificationStatus,
+      alternativeCandidates: alternatives,
+      needsHumanReview: !!o.needsHumanReview || confidence < 0.85
+    };
+  }
+  function statusLabelFor(r){
+    if (!r) return 'Identificación no disponible aquí';
+    if (r.verificationStatus === 'error') return 'Error al identificar';
+    if (r.verificationStatus === 'unavailable' || !r.name) return 'Identificación no disponible aquí';
+    if (r.confidence >= 0.85) return 'Identificado';
+    if (r.confidence >= 0.60) return 'Revisar nombre';
+    return 'Identificación incierta';
+  }
+  function finalizeResult(raw, hash, source){
+    var clean = sanitizeIdentification(raw);
+    clean.imageHash = hash || null;
+    clean.identificationSource = source;
+    clean.identificationTimestamp = Date.now();
+    clean.statusLabel = statusLabelFor(clean);
+    return clean;
+  }
+  function unavailableResult(hash, kind){
+    return {
+      name: '', brand: null, modelFamily: null, colorway: null, visibleProductCode: null,
+      confidence: 0, verificationStatus: kind === 'error' ? 'error' : 'unavailable',
+      alternativeCandidates: [], needsHumanReview: true,
+      imageHash: hash || null, identificationSource: kind === 'error' ? 'error' : 'none',
+      identificationTimestamp: Date.now(),
+      statusLabel: kind === 'error' ? 'Error al identificar' : 'Identificación no disponible aquí'
+    };
+  }
+  function withSource(identification, source){
+    var copy = JSON.parse(JSON.stringify(identification));
+    copy.identificationSource = source;
+    copy.statusLabel = statusLabelFor(copy);
+    return copy;
+  }
+  function findCachedByHash(hash){
+    if (!hash) return null;
+    for (var i = 0; i < DATA.length; i++){
+      if (DATA[i].identification && DATA[i].identification.imageHash === hash) return DATA[i].identification;
     }
-    return sample.json(identifyChunkPrompt(chunk.length), { images: chunk, modelTier: 'quick', cache: false }).then(function(arr){
-      if (!Array.isArray(arr) || arr.length !== chunk.length) throw new Error('bad_shape');
-      return arr.map(function(n){ var s = String(n || '').trim(); return s || null; });
-    }).catch(function(){ return chunk.map(function(){ return null; }); });
+    return null;
   }
-  function identifyProductNames(files, onProgress){
-    if (!files.length) return Promise.resolve([]);
-    if (typeof claude === 'undefined' || !claude || !claude.use){ return Promise.resolve(files.map(function(){ return null; })); }
-    return claude.use('sample').then(function(sample){
-      if (!sample) return files.map(function(){ return null; });
-      return sample.limits().then(function(limits){
-        if (!limits || !limits.images) return files.map(function(){ return null; });
-        var maxCount = limits.images.maxCount || 1;
-        var chunks = [];
-        for (var i = 0; i < files.length; i += maxCount){ chunks.push(files.slice(i, i + maxCount)); }
-        if (onProgress) onProgress(0, chunks.length);
-        var done = 0;
-        return Promise.all(chunks.map(function(chunk){
-          return identifyChunk(sample, chunk).then(function(res){
-            done++;
-            if (onProgress) onProgress(done, chunks.length);
-            return res;
-          });
-        })).then(function(results){
-          return results.reduce(function(acc, r){ return acc.concat(r); }, []);
-        });
+  function sha256Hex(file){
+    if (!(window.crypto && window.crypto.subtle)) return Promise.resolve(null);
+    return file.arrayBuffer().then(function(buf){
+      return crypto.subtle.digest('SHA-256', buf);
+    }).then(function(hashBuf){
+      var bytes = new Uint8Array(hashBuf);
+      var hex = '';
+      for (var i = 0; i < bytes.length; i++){ var h = bytes[i].toString(16); hex += h.length < 2 ? '0' + h : h; }
+      return hex;
+    }).catch(function(){ return null; });
+  }
+  function fileToBase64(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(String(reader.result).split(',')[1] || ''); };
+      reader.onerror = function(){ reject(new Error('read_failed')); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function mapWithConcurrency(items, limit, worker){
+    return new Promise(function(resolve){
+      if (!items.length){ resolve([]); return; }
+      var results = new Array(items.length);
+      var idx = 0, active = 0, finished = 0;
+      function settle(i, val){
+        results[i] = val;
+        active--; finished++;
+        if (finished === items.length){ resolve(results); return; }
+        pump();
+      }
+      function pump(){
+        while (active < limit && idx < items.length){
+          (function(i){
+            active++;
+            worker(items[i], i).then(function(v){ settle(i, v); }, function(e){ settle(i, { __error: e }); });
+          })(idx++);
+        }
+      }
+      pump();
+    });
+  }
+  function identifyChunkStructured(sample, files){
+    return sample.json(buildIdentifyPrompt(files.length), { images: files, modelTier: 'quick', cache: false }).then(function(res){
+      var arr = Array.isArray(res) ? res : [res];
+      if (arr.length !== files.length) throw new Error('bad_shape');
+      return arr;
+    });
+  }
+  function identifyViaApi(file, hash, existingName){
+    return fileToBase64(file).then(function(b64){
+      return fetch('/api/identify-sneaker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: hash || (Date.now() + '-' + Math.random().toString(36).slice(2)),
+          sourceFilename: file.name,
+          imageBase64: b64,
+          mediaType: file.type || 'image/jpeg',
+          existingName: existingName || null
+        })
       });
-    }).catch(function(){ return files.map(function(){ return null; }); });
+    }).then(function(res){
+      if (!res.ok) return res.json().catch(function(){ return null; }).then(function(body){
+        throw new Error((body && body.error) || ('http_' + res.status));
+      });
+      return res.json();
+    }).then(function(json){
+      return finalizeResult(json, hash, 'api');
+    });
+  }
+  // Every image is identified with its OWN independent AI request — never batched
+  // into one call — so a mismatch in one photo can never bleed into another's name.
+  function identifyOne(file, hash, existingName){
+    var hasClaudeRuntime = typeof claude !== 'undefined' && claude && claude.use;
+    if (!hasClaudeRuntime){
+      return identifyViaApi(file, hash, existingName).catch(function(){ return unavailableResult(hash, 'error'); });
+    }
+    return claude.use('sample').then(function(sample){
+      if (!sample) return unavailableResult(hash, 'unavailable');
+      return sample.limits().then(function(limits){
+        if (!limits || !limits.images) return unavailableResult(hash, 'unavailable');
+        return identifyChunkStructured(sample, [file]).then(function(arr){
+          return finalizeResult(arr[0], hash, 'sample');
+        }).catch(function(){ return unavailableResult(hash, 'error'); });
+      });
+    }).catch(function(){ return unavailableResult(hash, 'unavailable'); });
+  }
+  /**
+   * entries: [{file: File, existingName: string|null}]
+   * onProgress(done, total) fires as each image finishes (cache hits count instantly).
+   * onItem(index, result) fires the moment that single entry's result is ready, so the
+   * caller can update that product's card immediately instead of waiting for the batch.
+   * Concurrency is capped at 3 simultaneous requests to avoid rate-limit failures.
+   * Resolves to an array of identification results, same order/length as entries.
+   */
+  function identifyBatch(entries, onProgress, onItem, bypassCache){
+    var total = entries.length;
+    if (!total) return Promise.resolve([]);
+    var doneCount = 0;
+    function bump(){ doneCount++; if (onProgress) onProgress(doneCount, total); }
+
+    return Promise.all(entries.map(function(e){ return sha256Hex(e.file); })).then(function(hashes){
+      var results = new Array(total);
+      return mapWithConcurrency(entries, 3, function(entry, i){
+        var cached = bypassCache ? null : findCachedByHash(hashes[i]);
+        if (cached){
+          var cachedRes = withSource(cached, 'cache');
+          results[i] = cachedRes; bump(); if (onItem) onItem(i, cachedRes);
+          return Promise.resolve(cachedRes);
+        }
+        return identifyOne(entry.file, hashes[i], entry.existingName).then(function(res){
+          results[i] = res; bump(); if (onItem) onItem(i, res); return res;
+        });
+      }).then(function(){ return results; });
+    });
   }
 
   // ---------------- inject extra edit-pro styles ----------------
@@ -1284,7 +1452,22 @@
     '#bulk-text{min-height:90px;}' +
     '.color-swatch-row{display:flex;gap:10px;flex-wrap:wrap;}' +
     '.color-swatch-row .field{flex:1;min-width:110px;}' +
-    '.color-swatch-row input[type=color]{width:100%;height:40px;padding:2px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;}';
+    '.color-swatch-row input[type=color]{width:100%;height:40px;padding:2px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;}' +
+    '@media print{ .card-tools{display:none!important;} }' +
+    '.review-dot{width:10px;height:10px;border-radius:50%;background:#ffb020;align-self:center;box-shadow:0 0 0 2px var(--card);flex:none;}' +
+    '.id-panel{margin:2px 0 14px;padding:12px;border-radius:12px;background:var(--paper);border:1px solid var(--line);font-size:12.5px;}' +
+    '.id-panel .id-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;}' +
+    '.id-status{font-weight:800;padding:2px 8px;border-radius:999px;font-size:11px;letter-spacing:.02em;}' +
+    '.id-status.ok{background:rgba(111,166,15,.18);color:var(--lime-deep);}' +
+    '.id-status.warn{background:rgba(255,176,32,.18);color:#a86400;}' +
+    '.id-status.bad{background:rgba(192,57,43,.16);color:var(--danger);}' +
+    '.id-alts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}' +
+    '.id-alts button{font-size:11.5px;font-weight:700;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 10px;cursor:pointer;color:var(--text);}' +
+    '.id-alts button:hover{border-color:var(--lime-deep);}' +
+    '.id-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}' +
+    '.id-actions button{font-size:11.5px;font-weight:800;border-radius:8px;padding:6px 10px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--text);}' +
+    '.id-actions button:hover{border-color:var(--lime-deep);}' +
+    '.id-meta{color:var(--muted);}';
   document.head.appendChild(editProStyle);
 
   // ---------------- inject extra modals (bulk upload / site texts / colors) ----------------
@@ -1343,43 +1526,106 @@
       '<button type="button" class="btn-contact" id="redo-btn" title="Rehacer">↻</button>' +
       '<button type="button" class="btn-contact" id="text-edit-btn">Textos</button>' +
       '<button type="button" class="btn-contact" id="theme-edit-btn">Colores</button>' +
-      '<button type="button" class="btn-contact" id="bulk-upload-btn">Subir en masa</button>'
+      '<button type="button" class="btn-contact" id="bulk-upload-btn">Subir en masa</button>' +
+      '<button type="button" class="btn-contact" id="reidentify-pending-btn">Identificar nombres pendientes</button>'
     );
   }
   document.getElementById('undo-btn').addEventListener('click', undo);
   document.getElementById('redo-btn').addEventListener('click', redo);
 
-  // ---------------- product modal: file upload for image field ----------------
+  // ---------------- product modal: file upload + AI identification panel ----------------
   var fNameInput = document.getElementById('f-name');
   if (fNameInput) fNameInput.placeholder = 'Se identifica solo al subir la foto (o escríbelo tú)';
   var fImgInput = document.getElementById('f-img');
+
+  var clearImgStatus = function(){
+    var el = document.getElementById('f-img-status');
+    if (el) el.textContent = '';
+  };
+  var statusCssClass = function(label){
+    if (label === 'Identificado') return 'ok';
+    if (label === 'Revisar nombre') return 'warn';
+    return 'bad';
+  };
+  var renderIdPanel = function(){
+    var panel = document.getElementById('id-panel');
+    if (!panel) return;
+    if (!lastIdentification){ panel.hidden = true; panel.innerHTML = ''; return; }
+    var r = lastIdentification;
+    var pct = Math.round((r.confidence || 0) * 100);
+    var cls = statusCssClass(r.statusLabel);
+    var altsHtml = (r.alternativeCandidates || []).map(function(alt){
+      return '<button type="button" class="id-use-alt" data-alt="' + escapeHtml(alt) + '">' + escapeHtml(alt) + '</button>';
+    }).join('');
+    panel.hidden = false;
+    panel.innerHTML =
+      '<div class="id-row"><strong>Nombre sugerido por IA</strong><span class="id-status ' + cls + '">' + escapeHtml(r.statusLabel) + (r.name ? ' · ' + pct + '%' : '') + '</span></div>' +
+      (r.name ? '<div>' + escapeHtml(r.name) + '</div>' : '<div class="id-meta">Sin sugerencia disponible.</div>') +
+      (r.brand || r.colorway ? '<div class="id-meta">' + escapeHtml([r.brand, r.modelFamily, r.colorway].filter(Boolean).join(' · ')) + '</div>' : '') +
+      (r.visibleProductCode ? '<div class="id-meta">Código visible: ' + escapeHtml(r.visibleProductCode) + '</div>' : '') +
+      (altsHtml ? '<div class="id-meta" style="margin-top:6px;">Alternativas:</div><div class="id-alts">' + altsHtml + '</div>' : '') +
+      '<div class="id-actions">' +
+        (r.name ? '<button type="button" id="id-use-main">Usar este nombre</button>' : '') +
+        '<button type="button" id="id-reidentify">Volver a identificar</button>' +
+      '</div>';
+    var useMain = document.getElementById('id-use-main');
+    if (useMain) useMain.addEventListener('click', function(){ fNameInput.value = r.name; });
+    panel.querySelectorAll('.id-use-alt').forEach(function(btn){
+      btn.addEventListener('click', function(){ fNameInput.value = btn.dataset.alt; });
+    });
+    var reidBtn = document.getElementById('id-reidentify');
+    var reidArmed = false;
+    reidBtn.addEventListener('click', function(){
+      var currentImg = fImgInput.value.trim();
+      if (!currentImg){ document.getElementById('f-img-status').textContent = 'Primero sube o indica una imagen.'; return; }
+      var nameEdited = fNameInput.value.trim() && r.name && fNameInput.value.trim() !== r.name;
+      if (nameEdited && !reidArmed){
+        reidArmed = true;
+        reidBtn.textContent = '¿Reemplazar el nombre? Toca de nuevo';
+        setTimeout(function(){ reidArmed = false; reidBtn.textContent = 'Volver a identificar'; }, 5500);
+        return;
+      }
+      fetch(currentImg).then(function(res){ return res.blob(); }).then(function(blob){
+        var file = new File([blob], 'reidentify.jpg', { type: blob.type || 'image/jpeg' });
+        document.getElementById('f-img-status').textContent = 'Analizando imagen…';
+        runIdentification(file, null, null, true);
+      }).catch(function(){
+        document.getElementById('f-img-status').textContent = 'No se pudo volver a leer esta imagen.';
+      });
+    });
+  };
+  var runIdentification = function(file, existingName, onDone, bypassCache){
+    var status = document.getElementById('f-img-status');
+    status.textContent = 'Analizando imagen…';
+    identifyBatch([{ file: file, existingName: existingName || null }], function(){
+      status.textContent = 'Verificando nombre…';
+    }, null, bypassCache).then(function(results){
+      var result = results[0];
+      lastIdentification = result;
+      renderIdPanel();
+      if (result.name && !fNameInput.value.trim()){ fNameInput.value = result.name; }
+      status.textContent = result.identificationSource === 'cache' ? 'Modelo recuperado de caché ✔' : (result.name ? 'Análisis listo ✔' : result.statusLabel);
+      if (onDone) onDone(result);
+    });
+  };
+
   if (fImgInput){
     fImgInput.insertAdjacentHTML('afterend',
       '<input type="file" id="f-img-file" accept="image/*" style="margin-top:8px;">' +
-      '<div id="f-img-status" class="modal-sub" style="margin-top:4px;margin-bottom:0;"></div>'
+      '<div id="f-img-status" class="modal-sub" style="margin-top:4px;margin-bottom:0;"></div>' +
+      '<div id="id-panel" class="id-panel" hidden></div>'
     );
     document.getElementById('f-img-file').addEventListener('change', function(e){
       var file = e.target.files && e.target.files[0];
       if (!file) return;
       var status = document.getElementById('f-img-status');
       var nameWasEmpty = !fNameInput.value.trim();
+      lastIdentification = null;
+      renderIdPanel();
       status.textContent = 'Subiendo imagen…';
       uploadImageFile(file).then(function(url){
         fImgInput.value = url;
-        if (nameWasEmpty){
-          status.textContent = 'Imagen lista ✔ — identificando modelo…';
-          identifyProductNames([file]).then(function(names){
-            var detected = names && names[0];
-            if (detected && !fNameInput.value.trim()){
-              fNameInput.value = detected;
-              status.textContent = 'Modelo identificado ✔ — revisa el nombre.';
-            } else {
-              status.textContent = 'Imagen lista ✔ — no se identificó el modelo, escríbelo tú.';
-            }
-          });
-        } else {
-          status.textContent = 'Imagen lista ✔';
-        }
+        runIdentification(file, nameWasEmpty ? null : fNameInput.value.trim());
       }).catch(function(){
         status.textContent = 'No se pudo subir la imagen. Usa una URL.';
       });
@@ -1457,6 +1703,7 @@
   });
   document.getElementById('bulk-modal-close').addEventListener('click', function(){ bulkModal.hidden = true; });
   bulkModal.addEventListener('click', function(e){ if (e.target === bulkModal) bulkModal.hidden = true; });
+  var MAX_BULK_IMAGES = 20;
   document.getElementById('bulk-apply-btn').addEventListener('click', function(){
     var filesInput = document.getElementById('bulk-files');
     var textArea = document.getElementById('bulk-text');
@@ -1467,55 +1714,124 @@
       status.textContent = 'Agrega imágenes o una lista de productos.';
       return;
     }
-    var newProducts = [];
+    var truncatedNote = '';
+    if (files.length > MAX_BULK_IMAGES){
+      truncatedNote = ' Se procesaron solo las primeras ' + MAX_BULK_IMAGES + ' imágenes (máximo por lote).';
+      files = files.slice(0, MAX_BULK_IMAGES);
+    }
+    var badFile = files.filter(function(f){ return !/^image\/(jpeg|png|webp|gif)$/i.test(f.type); })[0];
+    if (badFile){
+      status.textContent = 'El archivo "' + badFile.name + '" no es una imagen JPG, PNG o WebP válida.';
+      return;
+    }
+
+    var textProducts = [];
     lines.forEach(function(line){
       var parts = line.split(';').map(function(s){ return s.trim(); });
+      if (!parts[0]) return; // a text line has no photo to identify a name from — it needs one typed in
       var original = parts[1] ? Number(parts[1]) : null;
-      newProducts.push({
-        name: parts[0] || UNKNOWN_MODEL_NAME,
+      textProducts.push({
+        name: parts[0],
         original: (original && !isNaN(original)) ? original : null,
         sale: parts[2] || "0",
         sizes: parts[3] ? parts[3].split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [],
         img: parts[4] || "images/logo.jpg"
       });
     });
+
     if (!files.length){
-      finishBulk(newProducts);
+      if (!textProducts.length){ status.textContent = 'No se agregaron productos.' + truncatedNote; return; }
+      pushHistory();
+      DATA.push.apply(DATA, textProducts);
+      dirty = true; updateEditStatus(); renderGrid();
+      status.textContent = 'Se agregaron ' + textProducts.length + ' producto(s).' + truncatedNote;
+      filesInput.value = ''; textArea.value = '';
       return;
     }
-    status.textContent = 'Identificando modelo(s) en las fotos…';
-    identifyProductNames(files, function(done, total){
-      if (total > 1) status.textContent = 'Identificando modelos… (' + done + '/' + total + ')';
-    }).then(function(detectedNames){
-      status.textContent = 'Subiendo ' + files.length + ' imagen(es)…';
-      return Promise.all(files.map(function(file, fi){
-        return uploadImageFile(file).then(function(url){
-          newProducts.push({ name: detectedNames[fi] || UNKNOWN_MODEL_NAME, original: null, sale: "0", sizes: [], img: url });
-        }).catch(function(){
-          status.textContent = 'No se pudo subir ' + file.name + '.';
-        });
-      }));
-    }).then(function(){
-      finishBulk(newProducts);
-    });
 
-    function finishBulk(list){
-      if (!list.length){
-        status.textContent = 'No se agregaron productos.';
-        return;
-      }
-      pushHistory();
-      DATA.push.apply(DATA, list);
-      dirty = true;
-      updateEditStatus();
-      renderGrid();
-      var unknownCount = list.filter(function(p){ return p.name === UNKNOWN_MODEL_NAME; }).length;
-      var msg = 'Se agregaron ' + list.length + ' producto(s).';
-      if (unknownCount) msg += ' ' + unknownCount + ' quedaron como "' + UNKNOWN_MODEL_NAME + '" — revísalos y ponles nombre.';
+    pushHistory();
+    var startIndex = DATA.length + textProducts.length;
+    var placeholders = files.map(function(file){
+      var previewUrl = URL.createObjectURL(file);
+      return { name: '', original: null, sale: "0", sizes: [], img: previewUrl, _pending: 'Analizando imagen…', _previewUrl: previewUrl };
+    });
+    DATA.push.apply(DATA, textProducts);
+    DATA.push.apply(DATA, placeholders);
+    dirty = true;
+    updateEditStatus();
+    renderGrid();
+    var progressMsg = 'Identificando 0 de ' + files.length + ' productos…' + truncatedNote;
+    status.textContent = progressMsg;
+    updateEditStatus(progressMsg);
+
+    var entries = files.map(function(f){ return { file: f, existingName: null }; });
+    identifyBatch(entries, function(done, total){
+      var msg = 'Identificando ' + done + ' de ' + total + ' productos…' + truncatedNote;
       status.textContent = msg;
+      updateEditStatus(msg);
+    }, function(i, result){
+      var product = placeholders[i];
+      var dataIndex = startIndex + i;
+      if (result.name) product.name = result.name;
+      product.identification = result;
+      delete product._pending;
+      if (DATA[dataIndex] === product) renderGrid();
+      uploadImageFile(files[i]).then(function(url){
+        if (product._previewUrl){ URL.revokeObjectURL(product._previewUrl); delete product._previewUrl; }
+        product.img = url;
+        if (DATA[dataIndex] === product) renderGrid();
+      }).catch(function(){});
+    }).then(function(results){
+      var unknownCount = results.filter(function(r){ return !r.name; }).length;
+      var msg = 'Se agregaron ' + (textProducts.length + files.length) + ' producto(s).' + truncatedNote;
+      if (unknownCount) msg += ' ' + unknownCount + ' quedaron sin nombre identificado — ábrelos para revisar y escribirlo.';
+      status.textContent = msg;
+      updateEditStatus();
       filesInput.value = '';
       textArea.value = '';
-    }
+    });
+  });
+
+  // ---------------- bulk action: re-identify everything still pending ----------------
+  function needsIdentification(p){
+    if (p._pending || p.manuallyEditedName) return false;
+    if (!p.name) return true;
+    return !!(p.identification && (p.identification.needsHumanReview ||
+      p.identification.verificationStatus === 'error' || p.identification.verificationStatus === 'unavailable'));
+  }
+  document.getElementById('reidentify-pending-btn').addEventListener('click', function(){
+    var targets = [];
+    for (var i = 0; i < DATA.length; i++){ if (needsIdentification(DATA[i])) targets.push(i); }
+    if (!targets.length){ updateEditStatus('No hay productos pendientes de identificar.'); return; }
+    updateEditStatus('Recuperando ' + targets.length + ' imagen(es)…');
+    Promise.all(targets.map(function(i){
+      return fetch(DATA[i].img).then(function(res){ return res.blob(); }).then(function(blob){
+        return new File([blob], 'reidentify-' + i + '.jpg', { type: blob.type || 'image/jpeg' });
+      }).catch(function(){ return null; });
+    })).then(function(files){
+      var entries = [];
+      var entryIndexToDataIndex = [];
+      files.forEach(function(file, k){
+        if (!file) return;
+        entries.push({ file: file, existingName: DATA[targets[k]].name || null });
+        entryIndexToDataIndex.push(targets[k]);
+      });
+      if (!entries.length){ updateEditStatus('No se pudieron leer esas imágenes.'); return; }
+      pushHistory();
+      identifyBatch(entries, function(done, total){
+        updateEditStatus('Identificando ' + done + ' de ' + total + ' pendientes…');
+      }, function(k, result){
+        var dataIndex = entryIndexToDataIndex[k];
+        var product = DATA[dataIndex];
+        if (!product) return;
+        if (result.name) product.name = result.name;
+        product.identification = result;
+        renderGrid();
+      }, true).then(function(){
+        dirty = true;
+        updateEditStatus('Identificación de pendientes terminada ✔');
+      });
+    });
   });
 
   normalizeMetaDefaults();

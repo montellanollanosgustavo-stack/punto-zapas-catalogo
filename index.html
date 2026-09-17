@@ -833,8 +833,7 @@
   productModal.addEventListener('click', function(e){ if (e.target === productModal) closeProductModal(); });
 
   document.getElementById('save-product-btn').addEventListener('click', function(){
-    var name = document.getElementById('f-name').value.trim();
-    if (!name){ document.getElementById('f-name').focus(); return; }
+    var name = document.getElementById('f-name').value.trim() || ('Producto ' + (DATA.length + 1));
     var originalRaw = document.getElementById('f-original').value.trim();
     var sale = document.getElementById('f-sale').value.trim() || "0";
     var sizes = document.getElementById('f-sizes').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
@@ -1298,6 +1297,8 @@
   document.getElementById('redo-btn').addEventListener('click', redo);
 
   // ---------------- product modal: file upload for image field ----------------
+  var fNameInput = document.getElementById('f-name');
+  if (fNameInput) fNameInput.placeholder = 'Déjalo vacío para un nombre automático (Producto 1, 2…)';
   var fImgInput = document.getElementById('f-img');
   if (fImgInput){
     fImgInput.insertAdjacentHTML('afterend',
@@ -1401,23 +1402,23 @@
     }
     status.textContent = 'Procesando…';
     var newProducts = [];
+    var autoCount = DATA.length;
+    function autoName(){ autoCount++; return 'Producto ' + autoCount; }
     lines.forEach(function(line){
       var parts = line.split(';').map(function(s){ return s.trim(); });
-      if (!parts[0]) return;
       var original = parts[1] ? Number(parts[1]) : null;
       newProducts.push({
-        name: parts[0],
+        name: parts[0] || autoName(),
         original: (original && !isNaN(original)) ? original : null,
         sale: parts[2] || "0",
         sizes: parts[3] ? parts[3].split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [],
         img: parts[4] || "images/logo.jpg"
       });
     });
-    Promise.all(files.map(function(file){
+    var fileNames = files.map(function(){ return autoName(); });
+    Promise.all(files.map(function(file, fi){
       return uploadImageFile(file).then(function(url){
-        var name = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
-        name = name.charAt(0).toUpperCase() + name.slice(1);
-        newProducts.push({ name: name, original: null, sale: "0", sizes: [], img: url });
+        newProducts.push({ name: fileNames[fi], original: null, sale: "0", sizes: [], img: url });
       }).catch(function(){
         status.textContent = 'No se pudo subir ' + file.name + '.';
       });
